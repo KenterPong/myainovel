@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# 禁止爬取特定目錄
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+
+# 允許特定檔案
+Allow: /api/health
+Allow: /sitemap.xml
+
+Sitemap: https://your-domain.com/sitemap.xml

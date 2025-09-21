@@ -1,0 +1,95 @@
+export const metadata = {
+  title: '關於我們',
+  description: '了解我們的團隊、使命和價值觀。',
+};
+
+export default function About() {
+  return (
+    <div className="bg-white py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            關於我們
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            我們是一支充滿熱情的團隊，致力於為客戶提供最優質的數位解決方案。
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">我們的使命</h2>
+            <p className="text-lg text-gray-600 mb-6">
+              我們相信技術的力量能夠改變世界。我們的使命是透過創新的數位解決方案，
+              幫助企業和個人實現他們的目標，創造更美好的未來。
+            </p>
+            <p className="text-lg text-gray-600">
+              從概念到實現，我們陪伴客戶走過每一個階段，確保每個專案都能達到最高的品質標準。
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg p-8">
+            <div className="grid grid-cols-2 gap-6 text-center">
+              <div>
+                <div className="text-3xl font-bold text-blue-600 mb-2">50+</div>
+                <div className="text-gray-600">完成專案</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-blue-600 mb-2">100%</div>
+                <div className="text-gray-600">客戶滿意度</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-blue-600 mb-2">5+</div>
+                <div className="text-gray-600">年經驗</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-blue-600 mb-2">24/7</div>
+                <div className="text-gray-600">技術支援</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">我們的價值觀</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">創新</h3>
+              <p className="text-gray-600">
+                持續探索最新的技術趨勢，為客戶提供創新的解決方案。
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">品質</h3>
+              <p className="text-gray-600">
+                對每個專案都堅持最高的品質標準，確保客戶獲得最佳體驗。
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">合作</h3>
+              <p className="text-gray-600">
+                與客戶建立長期合作關係，共同成長，實現雙贏。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
