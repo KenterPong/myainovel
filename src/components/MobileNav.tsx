@@ -1,13 +1,15 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false)
+  const pathname = usePathname()
 
   const navigationItems = [
     { name: '首頁', href: '/', icon: '🏠' },
-    { name: '探索', href: '/explore', icon: '🔍', active: true },
+    { name: '探索', href: '/explore', icon: '🔍' },
     { name: '故事起源', href: '/origin', icon: '📚' },
     { name: '我的收藏', href: '/collection', icon: '❤️' },
     { name: '通知', href: '/notifications', icon: '🔔' },
@@ -47,22 +49,25 @@ export default function MobileNav() {
             
             <nav className="p-4">
               <ul className="space-y-2">
-                {navigationItems.map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      onClick={() => setIsOpen(false)}
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                        item.active
-                          ? 'bg-purple-100 text-purple-700 font-medium'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <span className="text-lg">{item.icon}</span>
-                      <span>{item.name}</span>
-                    </Link>
-                  </li>
-                ))}
+                {navigationItems.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <li key={item.name}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                          isActive
+                            ? 'bg-purple-100 text-purple-700 font-medium'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span className="text-lg">{item.icon}</span>
+                        <span>{item.name}</span>
+                      </Link>
+                    </li>
+                  )
+                })}
               </ul>
             </nav>
           </div>

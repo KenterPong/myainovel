@@ -1,13 +1,15 @@
 'use client'
 import Link from 'next/link'
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 
 export default function Sidebar() {
   const [selectedLanguage, setSelectedLanguage] = useState('繁體中文')
+  const pathname = usePathname()
 
   const navigationItems = [
     { name: '首頁', href: '/', icon: '🏠' },
-    { name: '探索', href: '/explore', icon: '🔍', active: true },
+    { name: '探索', href: '/explore', icon: '🔍' },
     { name: '故事起源', href: '/origin', icon: '📚' },
     { name: '我的收藏', href: '/collection', icon: '❤️' },
     { name: '通知', href: '/notifications', icon: '🔔' },
@@ -27,21 +29,24 @@ export default function Sidebar() {
       {/* 導航選單 */}
       <nav className="flex-1 p-3 lg:p-4 overflow-y-auto">
         <ul className="space-y-1 lg:space-y-2">
-          {navigationItems.map((item) => (
-            <li key={item.name}>
-              <Link
-                href={item.href}
-                className={`flex items-center space-x-2 lg:space-x-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg transition-colors text-sm lg:text-base ${
-                  item.active
-                    ? 'bg-purple-100 text-purple-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <span className="text-base lg:text-lg">{item.icon}</span>
-                <span className="truncate">{item.name}</span>
-              </Link>
-            </li>
-          ))}
+          {navigationItems.map((item) => {
+            const isActive = pathname === item.href
+            return (
+              <li key={item.name}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center space-x-2 lg:space-x-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg transition-colors text-sm lg:text-base ${
+                    isActive
+                      ? 'bg-purple-100 text-purple-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <span className="text-base lg:text-lg">{item.icon}</span>
+                  <span className="truncate">{item.name}</span>
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </nav>
 
