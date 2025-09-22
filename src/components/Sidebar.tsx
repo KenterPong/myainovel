@@ -23,7 +23,14 @@ export default function Sidebar() {
     <div className="w-full bg-white border-r border-gray-200 h-screen flex flex-col sticky top-0">
       {/* Logo */}
       <div className="p-4 lg:p-6 border-b border-gray-200">
-        <h1 className="text-xl lg:text-2xl font-bold text-purple-600">AI聚作</h1>
+        <div className="flex items-center space-x-3">
+          <img 
+            src="/images/logo.png" 
+            alt="AI聚作 Logo" 
+            className="w-8 h-8 lg:w-10 lg:h-10"
+          />
+          <h1 className="text-xl lg:text-2xl font-bold text-purple-600">AI聚作</h1>
+        </div>
       </div>
 
       {/* 導航選單 */}

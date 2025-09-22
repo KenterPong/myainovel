@@ -20,7 +20,14 @@ export default function MobileNav() {
     <>
       {/* 移動端頂部導航欄 */}
       <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
-        <h1 className="text-xl font-bold text-purple-600">AI聚作</h1>
+        <div className="flex items-center space-x-2">
+          <img 
+            src="/images/logo.png" 
+            alt="AI聚作 Logo" 
+            className="w-6 h-6"
+          />
+          <h1 className="text-xl font-bold text-purple-600">AI聚作</h1>
+        </div>
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -36,7 +43,14 @@ export default function MobileNav() {
         <div className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50" onClick={() => setIsOpen(false)}>
           <div className="w-64 bg-white h-full shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h1 className="text-xl font-bold text-purple-600">AI聚作</h1>
+              <div className="flex items-center space-x-2">
+                <img 
+                  src="/images/logo.png" 
+                  alt="AI聚作 Logo" 
+                  className="w-6 h-6"
+                />
+                <h1 className="text-xl font-bold text-purple-600">AI聚作</h1>
+              </div>
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors"

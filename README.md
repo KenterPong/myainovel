@@ -189,6 +189,43 @@ myainovel/
 - 社群分享圖片
 - 其他靜態圖片資源
 
+## 🔧 重要檔案說明
+
+### `favicon.svg` - 現代化網站圖示
+- **用途**：提供向量格式的網站圖示，支援高解析度顯示
+- **優點**：
+  - 向量格式，在任何尺寸下都清晰
+  - 檔案小，載入速度快
+  - 支援深色/淺色主題自動切換
+- **瀏覽器支援**：Chrome、Firefox、Safari、Edge 等現代瀏覽器
+- **使用方式**：在 `layout.tsx` 中自動引用，無需手動設定
+
+### `manifest.json` - PWA 漸進式網頁應用設定
+- **用途**：讓網站可以安裝到手機桌面，像原生 App 一樣使用
+- **功能特色**：
+  - **離線使用**：支援 Service Worker 快取
+  - **全螢幕體驗**：移除瀏覽器 UI，提供原生 App 感受
+  - **快速啟動**：從桌面圖示直接開啟
+  - **自訂主題**：設定應用程式的主題色彩
+- **設定項目**：
+  - `name`：應用程式完整名稱
+  - `short_name`：桌面圖示顯示的簡短名稱
+  - `theme_color`：應用程式主題色彩（#8B5CF6 紫色）
+  - `background_color`：啟動畫面背景色
+  - `icons`：不同尺寸的應用程式圖示
+- **使用方式**：在 `layout.tsx` 中自動引用，支援 PWA 安裝
+
+### 檔案引用設定
+在 `src/app/layout.tsx` 中的設定：
+```html
+<head>
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/images/logo.png" />
+  <link rel="manifest" href="/manifest.json" />
+</head>
+```
+
 ## 🤝 貢獻
 
 歡迎提交 Issue 和 Pull Request 來改進這個樣板！
