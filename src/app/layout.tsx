@@ -4,6 +4,8 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import RightSidebar from "@/components/RightSidebar";
 import MobileNav from "@/components/MobileNav";
+import BottomNav from "@/components/BottomNav";
+import AdBanner from "@/components/AdBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -92,7 +94,7 @@ export default function RootLayout({
           
           {/* 中央內容區域 - 可捲動 */}
           <main className="flex-1 min-w-0 overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-4 py-6">
+            <div className="max-w-4xl mx-auto px-4 py-6 pb-32 lg:pb-6">
               {children}
             </div>
           </main>
@@ -102,6 +104,12 @@ export default function RootLayout({
             <RightSidebar />
           </div>
         </div>
+        
+        {/* 移動端底部導航 */}
+        <BottomNav />
+        
+        {/* 移動端廣告橫幅 */}
+        <AdBanner />
       </body>
     </html>
   );
