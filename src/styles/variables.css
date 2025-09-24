@@ -4,17 +4,77 @@
  */
 
 :root {
-  /* 主色彩 */
-  --primary-50: #f0f9ff;
-  --primary-100: #e0f2fe;
-  --primary-200: #bae6fd;
-  --primary-300: #7dd3fc;
-  --primary-400: #38bdf8;
-  --primary-500: #0ea5e9;
-  --primary-600: #0284c7;
-  --primary-700: #0369a1;
-  --primary-800: #075985;
-  --primary-900: #0c4a6e;
+  /* 主色彩 - 薰衣草紫系 */
+  --primary-50: #f8f6ff;
+  --primary-100: #f0ebff;
+  --primary-200: #e0d7ff;
+  --primary-300: #c7b8ff;
+  --primary-400: #a68eff;
+  --primary-500: #B39DDB;
+  --primary-600: #9c7dff;
+  --primary-700: #8b6bff;
+  --primary-800: #7a59ff;
+  --primary-900: #6b47ff;
+
+  /* 主色彩文字對比 */
+  --primary-50-text: #1f2937;
+  --primary-100-text: #1f2937;
+  --primary-200-text: #1f2937;
+  --primary-300-text: #1f2937;
+  --primary-400-text: #ffffff;
+  --primary-500-text: #ffffff;
+  --primary-600-text: #ffffff;
+  --primary-700-text: #ffffff;
+  --primary-800-text: #ffffff;
+  --primary-900-text: #ffffff;
+
+  /* 輔助色彩 - 珊瑚粉系 */
+  --secondary-50: #fef2f2;
+  --secondary-100: #fce7e7;
+  --secondary-200: #f8d1d1;
+  --secondary-300: #f2b5b5;
+  --secondary-400: #eb9999;
+  --secondary-500: #FFB6B9;
+  --secondary-600: #e68a8d;
+  --secondary-700: #cc5e61;
+  --secondary-800: #b33335;
+  --secondary-900: #990808;
+
+  /* 輔助色彩文字對比 */
+  --secondary-50-text: #1f2937;
+  --secondary-100-text: #1f2937;
+  --secondary-200-text: #1f2937;
+  --secondary-300-text: #1f2937;
+  --secondary-400-text: #1f2937;
+  --secondary-500-text: #ffffff;
+  --secondary-600-text: #ffffff;
+  --secondary-700-text: #ffffff;
+  --secondary-800-text: #ffffff;
+  --secondary-900-text: #ffffff;
+
+  /* 中間色彩 - 嫩綠系 */
+  --accent-50: #f0fdf4;
+  --accent-100: #dcfce7;
+  --accent-200: #bbf7d0;
+  --accent-300: #86efac;
+  --accent-400: #4ade80;
+  --accent-500: #A8E6CF;
+  --accent-600: #22c55e;
+  --accent-700: #16a34a;
+  --accent-800: #15803d;
+  --accent-900: #166534;
+
+  /* 中間色彩文字對比 */
+  --accent-50-text: #1f2937;
+  --accent-100-text: #1f2937;
+  --accent-200-text: #1f2937;
+  --accent-300-text: #1f2937;
+  --accent-400-text: #1f2937;
+  --accent-500-text: #1f2937;
+  --accent-600-text: #ffffff;
+  --accent-700-text: #ffffff;
+  --accent-800-text: #ffffff;
+  --accent-900-text: #ffffff;
 
   /* 中性色彩 */
   --gray-50: #f9fafb;
@@ -96,16 +156,77 @@
 /* 深色主題 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary-50: #0c4a6e;
-    --primary-100: #075985;
-    --primary-200: #0369a1;
-    --primary-300: #0284c7;
-    --primary-400: #0ea5e9;
-    --primary-500: #38bdf8;
-    --primary-600: #7dd3fc;
-    --primary-700: #bae6fd;
-    --primary-800: #e0f2fe;
-    --primary-900: #f0f9ff;
+    /* 薰衣草紫系 - 深色模式 */
+    --primary-50: #6b47ff;
+    --primary-100: #7a59ff;
+    --primary-200: #8b6bff;
+    --primary-300: #9c7dff;
+    --primary-400: #a68eff;
+    --primary-500: #B39DDB;
+    --primary-600: #c7b8ff;
+    --primary-700: #e0d7ff;
+    --primary-800: #f0ebff;
+    --primary-900: #f8f6ff;
+
+    /* 薰衣草紫系文字對比 - 深色模式 */
+    --primary-50-text: #ffffff;
+    --primary-100-text: #ffffff;
+    --primary-200-text: #ffffff;
+    --primary-300-text: #ffffff;
+    --primary-400-text: #ffffff;
+    --primary-500-text: #ffffff;
+    --primary-600-text: #1f2937;
+    --primary-700-text: #1f2937;
+    --primary-800-text: #1f2937;
+    --primary-900-text: #1f2937;
+
+    /* 珊瑚粉系 - 深色模式 */
+    --secondary-50: #990808;
+    --secondary-100: #b33335;
+    --secondary-200: #cc5e61;
+    --secondary-300: #e68a8d;
+    --secondary-400: #eb9999;
+    --secondary-500: #FFB6B9;
+    --secondary-600: #f2b5b5;
+    --secondary-700: #f8d1d1;
+    --secondary-800: #fce7e7;
+    --secondary-900: #fef2f2;
+
+    /* 珊瑚粉系文字對比 - 深色模式 */
+    --secondary-50-text: #ffffff;
+    --secondary-100-text: #ffffff;
+    --secondary-200-text: #ffffff;
+    --secondary-300-text: #ffffff;
+    --secondary-400-text: #ffffff;
+    --secondary-500-text: #ffffff;
+    --secondary-600-text: #1f2937;
+    --secondary-700-text: #1f2937;
+    --secondary-800-text: #1f2937;
+    --secondary-900-text: #1f2937;
+
+    /* 嫩綠系 - 深色模式 */
+    --accent-50: #166534;
+    --accent-100: #15803d;
+    --accent-200: #16a34a;
+    --accent-300: #22c55e;
+    --accent-400: #4ade80;
+    --accent-500: #A8E6CF;
+    --accent-600: #86efac;
+    --accent-700: #bbf7d0;
+    --accent-800: #dcfce7;
+    --accent-900: #f0fdf4;
+
+    /* 嫩綠系文字對比 - 深色模式 */
+    --accent-50-text: #ffffff;
+    --accent-100-text: #ffffff;
+    --accent-200-text: #ffffff;
+    --accent-300-text: #ffffff;
+    --accent-400-text: #ffffff;
+    --accent-500-text: #1f2937;
+    --accent-600-text: #1f2937;
+    --accent-700-text: #1f2937;
+    --accent-800-text: #1f2937;
+    --accent-900-text: #1f2937;
 
     --gray-50: #111827;
     --gray-100: #1f2937;
