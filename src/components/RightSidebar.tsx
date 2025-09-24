@@ -47,7 +47,7 @@ export default function RightSidebar() {
   }
 
   return (
-    <div className="w-full bg-white border-l border-gray-200 h-screen p-4 lg:p-6 sticky top-0 overflow-y-auto">
+    <div className="w-full bg-gray-100 border-l border-gray-200 h-screen p-4 lg:p-6 sticky top-0 overflow-y-auto">
       {/* 趨勢話題 */}
       <div className="mb-6 lg:mb-8">
         <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-3 lg:mb-4">趨勢話題</h3>
@@ -73,8 +73,8 @@ export default function RightSidebar() {
                   onClick={() => handleFollow(story.id)}
                   className={`px-2 lg:px-3 py-1 text-xs rounded-full transition-colors flex-shrink-0 ml-2 ${
                     followedStories.has(story.id)
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-700'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700'
                   }`}
                 >
                   {followedStories.has(story.id) ? '已關注' : '關注'}
@@ -82,7 +82,7 @@ export default function RightSidebar() {
               </div>
               <p className="text-xs lg:text-sm text-gray-600 mb-2 line-clamp-2">{story.description}</p>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-purple-600 font-medium">{story.type}</span>
+                <span className="text-xs text-primary-600 font-medium">{story.type}</span>
                 <span className="text-xs text-gray-500">{story.status}</span>
               </div>
             </div>

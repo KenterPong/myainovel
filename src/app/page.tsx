@@ -38,9 +38,9 @@ export default function Home() {
           tags={["#科幻", "#太空探險", "#神秘星球"]}
           hasVoting={false}
           votingResults={[
-            { option: "A. 謹慎探索周圍環境", percentage: 45, color: "bg-green-500" },
-            { option: "B. 嘗試與觀察者接觸", percentage: 30, color: "bg-yellow-500" },
-            { option: "C. 立即修理太空船準備離開", percentage: 25, color: "bg-blue-500" }
+            { option: "A. 謹慎探索周圍環境", percentage: 45, color: "bg-accent-500" },
+            { option: "B. 嘗試與觀察者接觸", percentage: 30, color: "bg-secondary-500" },
+            { option: "C. 立即修理太空船準備離開", percentage: 25, color: "bg-primary-500" }
           ]}
           engagement={{ likes: 3200, comments: 856, shares: 167 }}
         />
@@ -95,7 +95,7 @@ function StoryCard({
   engagement: { likes: number; comments: number; shares: number }
 }) {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 story-card">
+    <div className="bg-white rounded-lg shadow-lg p-6 story-card border border-gray-100">
       {/* 故事標題和時間 */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900">#{title}</h2>
@@ -111,7 +111,7 @@ function StoryCard({
       {/* 標籤 */}
       <div className="flex flex-wrap gap-2 mb-4 tags">
         {tags.map((tag, index) => (
-          <span key={index} className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full tag">
+          <span key={index} className="px-3 py-1 bg-primary-100 text-primary-700 text-sm rounded-full tag">
             {tag}
           </span>
         ))}
@@ -119,7 +119,7 @@ function StoryCard({
 
       {/* 展開內容連結 */}
       <div className="mb-4">
-        <a href="#" className="text-purple-600 hover:text-purple-800 text-sm font-medium">
+        <a href="#" className="text-primary-600 hover:text-primary-800 text-sm font-medium">
           點擊展開完整內容
         </a>
       </div>
@@ -140,12 +140,12 @@ function StoryCard({
           </h4>
           <div className="mb-4">
             <span className="text-sm text-gray-600">投票截止倒數: </span>
-            <span className="text-sm font-mono text-red-600">{votingDeadline}</span>
+            <span className="text-sm font-mono text-secondary-600">{votingDeadline}</span>
           </div>
           <div className="space-y-2 voting-options">
             {votingOptions?.map((option, index) => (
               <label key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer vote-option">
-                <input type="radio" name={`vote-${storyId}`} value={option} className="text-purple-600" />
+                <input type="radio" name={`vote-${storyId}`} value={option} className="text-primary-600" />
                 <span className="text-gray-700 text-sm sm:text-base">{option}</span>
               </label>
             ))}
@@ -190,7 +190,7 @@ function StoryCard({
           </button>
         </div>
         <div className="flex items-center space-x-4">
-          <button className="text-gray-600 hover:text-purple-600 text-sm btn-animate">收藏</button>
+          <button className="text-gray-600 hover:text-primary-600 text-sm btn-animate">收藏</button>
           <button className="text-gray-600 hover:text-red-600 text-sm btn-animate">檢舉</button>
         </div>
       </div>

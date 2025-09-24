@@ -249,8 +249,8 @@ export default function Origin() {
         <div 
           className={`h-2 rounded-full transition-all duration-500 ease-out ${
             isComplete 
-              ? 'bg-gradient-to-r from-green-400 to-green-600' 
-              : 'bg-gradient-to-r from-blue-400 to-blue-600'
+              ? 'bg-gradient-to-r from-accent-400 to-accent-600' 
+              : 'bg-gradient-to-r from-secondary-400 to-secondary-600'
           }`}
           style={{ width: `${percentage}%` }}
         />
@@ -280,9 +280,9 @@ export default function Origin() {
     
     const getCategoryColor = (cat: string) => {
       switch (cat) {
-        case 'outer': return 'red';
-        case 'middle': return 'green';
-        case 'inner': return 'blue';
+        case 'outer': return 'secondary';
+        case 'middle': return 'accent';
+        case 'inner': return 'primary';
         default: return 'gray';
       }
     };
@@ -295,7 +295,7 @@ export default function Origin() {
           isSelected
             ? `border-${color}-500 bg-${color}-50 shadow-lg scale-105`
             : isLeading
-            ? 'border-green-500 bg-green-50 shadow-md'
+            ? 'border-accent-500 bg-accent-50 shadow-md'
             : `border-gray-300 hover:border-${color}-300 hover:shadow-md hover:scale-102`
         } ${isAnimating ? 'animate-pulse' : ''}`}
         onClick={onSelect}
@@ -313,14 +313,20 @@ export default function Origin() {
                 </svg>
               )}
             </div>
-            <span className="font-semibold text-gray-900 text-lg">{option.label}</span>
+            <span className={`font-semibold text-lg ${
+              isSelected 
+                ? `text-${color}-800` 
+                : isLeading 
+                ? 'text-accent-800' 
+                : 'text-gray-900'
+            }`}>{option.label}</span>
           </div>
           <div className="text-right">
-            <div className={`text-lg font-bold ${isLeading ? 'text-green-600' : 'text-gray-600'}`}>
+            <div className={`text-lg font-bold ${isLeading ? 'text-accent-600' : 'text-gray-600'}`}>
               {votes} 票
             </div>
             {isLeading && (
-              <div className="text-xs text-green-600 font-medium">
+              <div className="text-xs text-accent-600 font-medium">
                 ✓ 已達標
               </div>
             )}
@@ -339,11 +345,17 @@ export default function Origin() {
           />
         </div>
         
-        <p className="text-sm text-gray-600">{option.description}</p>
+        <p className={`text-sm ${
+          isSelected 
+            ? `text-${color}-700` 
+            : isLeading 
+            ? 'text-accent-700' 
+            : 'text-gray-600'
+        }`}>{option.description}</p>
         
         {isAnimating && (
-          <div className="absolute inset-0 bg-green-100 bg-opacity-50 rounded-xl flex items-center justify-center">
-            <div className="text-green-600 font-bold text-lg animate-bounce">
+          <div className="absolute inset-0 bg-accent-100 bg-opacity-50 rounded-xl flex items-center justify-center">
+            <div className="text-accent-600 font-bold text-lg animate-bounce">
               +1 票
             </div>
           </div>
@@ -368,13 +380,13 @@ export default function Origin() {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                 currentStep >= step 
                   ? 'bg-purple-600 text-white' 
-                  : 'bg-gray-300 text-gray-600'
+                  : 'bg-purple-200 text-purple-800'
               }`}>
                 {step}
               </div>
               {step < 2 && (
                 <div className={`w-8 h-0.5 ${
-                  currentStep > step ? 'bg-purple-600' : 'bg-gray-300'
+                  currentStep > step ? 'bg-purple-600' : 'bg-purple-300'
                 }`} />
               )}
             </div>
@@ -390,7 +402,7 @@ export default function Origin() {
             <h3 className="text-2xl font-bold text-gray-900 mb-2">投票完成！</h3>
             <p className="text-gray-600 mb-4">感謝您的參與，系統正在統計結果...</p>
             <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-secondary-600"></div>
             </div>
           </div>
         </div>
@@ -400,8 +412,8 @@ export default function Origin() {
       {currentStep === 1 && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">為您喜歡的故事元素投票</h2>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-blue-800 text-center">
+          <div className="bg-secondary-50 border border-secondary-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-secondary-800 text-center">
               💡 <strong>提示：</strong>系統會自動統計三大類別的最高票選項，當所有類別都有選項達到100票時，將自動生成AI故事！
             </p>
           </div>
@@ -410,7 +422,7 @@ export default function Origin() {
             {/* 故事類型選項 */}
             <div>
               <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="w-4 h-4 bg-red-500 rounded-full mr-3"></span>
+                <span className="w-4 h-4 bg-secondary-500 rounded-full mr-3"></span>
                 故事類型
               </h3>
               <div className="space-y-4">
@@ -437,7 +449,7 @@ export default function Origin() {
             {/* 故事背景選項 */}
             <div>
               <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="w-4 h-4 bg-green-500 rounded-full mr-3"></span>
+                <span className="w-4 h-4 bg-accent-500 rounded-full mr-3"></span>
                 故事背景
               </h3>
               <div className="space-y-4">
@@ -464,7 +476,7 @@ export default function Origin() {
             {/* 故事主題選項 */}
             <div>
               <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="w-4 h-4 bg-blue-500 rounded-full mr-3"></span>
+                <span className="w-4 h-4 bg-primary-500 rounded-full mr-3"></span>
                 故事主題
               </h3>
               <div className="space-y-4">
@@ -496,7 +508,7 @@ export default function Origin() {
               disabled={!selectedOptions.outer || !selectedOptions.middle || !selectedOptions.inner}
               className={`px-12 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform ${
                 selectedOptions.outer && selectedOptions.middle && selectedOptions.inner
-                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 hover:scale-105 hover:shadow-xl shadow-lg'
+                  ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 hover:scale-105 hover:shadow-xl shadow-lg'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
@@ -536,7 +548,7 @@ export default function Origin() {
                 navigator.clipboard.writeText(generatePrompt());
                 alert('提示詞已複製到剪貼簿！');
               }}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
             >
               複製提示詞
             </button>

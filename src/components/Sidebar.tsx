@@ -68,7 +68,7 @@ export default function Sidebar() {
   const languages = ['繁體中文', 'English', '日本語', '한국어']
 
   return (
-    <div className="w-full bg-white border-r border-gray-200 h-screen flex flex-col sticky top-0">
+    <div className="w-full bg-gray-100 border-r border-gray-200 h-screen flex flex-col sticky top-0">
       {/* Logo */}
       <div className="p-4 lg:p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
@@ -93,7 +93,7 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center space-x-2 lg:space-x-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg transition-colors text-sm lg:text-base ${
                     isActive
-                      ? 'bg-purple-100 text-purple-700 font-medium'
+                      ? 'bg-primary-100 text-primary-700 font-medium'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >

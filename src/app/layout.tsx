@@ -86,14 +86,14 @@ export default function RootLayout({
         {/* 移動端導航 */}
         <MobileNav />
         
-        <div className="min-h-screen bg-white flex">
+        <div className="min-h-screen bg-gray-50 flex">
           {/* 左側導航欄 - 固定 */}
           <div className="hidden lg:block lg:w-64 xl:w-72 flex-shrink-0">
             <Sidebar />
           </div>
           
           {/* 中央內容區域 - 可捲動 */}
-          <main className="flex-1 min-w-0 overflow-y-auto">
+          <main className="flex-1 min-w-0 overflow-y-auto bg-white">
             <div className="max-w-4xl mx-auto px-4 py-6 pb-32 lg:pb-6">
               {children}
             </div>

@@ -119,7 +119,7 @@ export default function MobileNav() {
         <div className={`lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50 ${isClosing ? 'fade-out' : 'fade-in'}`} onClick={handleClose}>
           <div className={`w-80 bg-white h-full shadow-xl ml-auto ${isClosing ? 'slide-out-to-right' : 'slide-in-from-right'}`} onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h1 className="text-xl font-bold text-purple-600">趨勢話題</h1>
+              <h1 className="text-xl font-bold text-primary-600">趨勢話題</h1>
               <button
                 onClick={handleClose}
                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
