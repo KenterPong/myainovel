@@ -5,9 +5,9 @@ export default function RightSidebar() {
   const [followedStories, setFollowedStories] = useState<Set<string>>(new Set())
 
   const trendingTopics = [
-    { name: '#神秘師父', discussions: 1234 },
-    { name: '#星際探險', discussions: 856 },
-    { name: '#魔法考試', discussions: 743 },
+    { name: '#神秘師父', discussions: 1234, rank: 1 },
+    { name: '#星際探險', discussions: 856, rank: 2 },
+    { name: '#魔法考試', discussions: 743, rank: 3 },
   ]
 
   const recommendedStories = [
@@ -52,12 +52,34 @@ export default function RightSidebar() {
       <div className="mb-6 lg:mb-8">
         <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-3 lg:mb-4">趨勢話題</h3>
         <div className="space-y-2 lg:space-y-3">
-          {trendingTopics.map((topic, index) => (
-            <div key={index} className="flex items-center justify-between p-2 lg:p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
-              <span className="text-gray-700 font-medium text-sm lg:text-base truncate">{topic.name}</span>
-              <span className="text-xs lg:text-sm text-gray-500 flex-shrink-0 ml-2">{topic.discussions} 討論</span>
-            </div>
-          ))}
+          {trendingTopics.map((topic, index) => {
+            const isTop1 = topic.rank === 1
+            const isTop2 = topic.rank === 2
+            return (
+              <div key={index} className={`flex items-center justify-between p-2 lg:p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-all duration-200 ${
+                isTop1 
+                  ? 'bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 shadow-sm' 
+                  : isTop2 
+                  ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 shadow-sm'
+                  : 'bg-gray-50'
+              }`}>
+                <div className="flex items-center space-x-2">
+                  {isTop1 && (
+                    <span className="text-yellow-500 text-sm font-bold">🔥</span>
+                  )}
+                  {isTop2 && (
+                    <span className="text-orange-500 text-sm font-bold">⭐</span>
+                  )}
+                  <span className={`font-medium text-sm lg:text-base truncate ${
+                    isTop1 ? 'text-purple-800' : isTop2 ? 'text-orange-800' : 'text-gray-700'
+                  }`}>{topic.name}</span>
+                </div>
+                <span className={`text-xs lg:text-sm flex-shrink-0 ml-2 ${
+                  isTop1 ? 'text-purple-600 font-semibold' : isTop2 ? 'text-orange-600 font-semibold' : 'text-gray-500'
+                }`}>{topic.discussions} 討論</span>
+              </div>
+            )
+          })}
         </div>
       </div>
 
