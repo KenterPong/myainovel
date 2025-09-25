@@ -26,6 +26,10 @@ export default function Origin() {
   const [showVoteSuccess, setShowVoteSuccess] = useState(false);
   const [animatingVotes, setAnimatingVotes] = useState<{[key: string]: boolean}>({});
   const [voteAnimation, setVoteAnimation] = useState<{[key: string]: number}>({});
+  const [showValidationError, setShowValidationError] = useState(false);
+  const [missingSelections, setMissingSelections] = useState<string[]>([]);
+  const [expandedCards, setExpandedCards] = useState<{[key: string]: boolean}>({});
+  const [showTopRanking, setShowTopRanking] = useState(false);
 
   // 三圈選項
   const options = {
@@ -106,7 +110,39 @@ export default function Origin() {
     return { optionId: highestOption, votes: highestVotes };
   };
 
+  // 獲取Top 3排名
+  const getTopRanking = (category: 'outer' | 'middle' | 'inner') => {
+    const allVotes = getCurrentVoteData(category);
+    const categoryOptions = category === 'outer' ? options.outer : 
+                          category === 'middle' ? options.middle : options.inner;
+    
+    return Object.entries(allVotes)
+      .map(([optionId, votes]) => {
+        const option = categoryOptions.find(opt => opt.id === optionId);
+        return {
+          id: optionId,
+          label: option?.label || '',
+          votes
+        };
+      })
+      .sort((a, b) => b.votes - a.votes)
+      .slice(0, 3);
+  };
+
   const handleVote = () => {
+    // 檢查是否有遺漏的選擇
+    const missing = [];
+    if (!selectedOptions.outer) missing.push('故事類型');
+    if (!selectedOptions.middle) missing.push('故事背景');
+    if (!selectedOptions.inner) missing.push('故事主題');
+    
+    if (missing.length > 0) {
+      setMissingSelections(missing);
+      setShowValidationError(true);
+      setTimeout(() => setShowValidationError(false), 3000);
+      return;
+    }
+
     if (selectedOptions.outer && selectedOptions.middle && selectedOptions.inner) {
       // 模擬投票
       const newVoteCounts = {
@@ -162,6 +198,12 @@ export default function Origin() {
       // 顯示投票完成提醒
       setShowVoteSuccess(true);
       setTimeout(() => setShowVoteSuccess(false), 3000);
+      
+      // 顯示Top 3排名
+      setTimeout(() => {
+        setShowTopRanking(true);
+        setTimeout(() => setShowTopRanking(false), 5000);
+      }, 1000);
       
       // 計算包含用戶投票後的總票數
       const calculateTotalVotes = (category: 'outer' | 'middle' | 'inner') => {
@@ -240,7 +282,7 @@ export default function Origin() {
   };
 
   // 進度條組件
-  const ProgressBar = ({ current, target = 100, className = "" }: { current: number; target?: number; className?: string }) => {
+  const ProgressBar = ({ current, target = 100, className = "", isLeading = false }: { current: number; target?: number; className?: string; isLeading?: boolean }) => {
     const percentage = Math.min((current / target) * 100, 100);
     const isComplete = current >= target;
     
@@ -248,9 +290,9 @@ export default function Origin() {
       <div className={`w-full bg-gray-200 rounded-full h-2 ${className}`}>
         <div 
           className={`h-2 rounded-full transition-all duration-500 ease-out ${
-            isComplete 
-              ? 'bg-gradient-to-r from-accent-400 to-accent-600' 
-              : 'bg-gradient-to-r from-secondary-400 to-secondary-600'
+            isComplete || isLeading
+              ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' 
+              : 'bg-gradient-to-r from-primary-400 to-primary-600'
           }`}
           style={{ width: `${percentage}%` }}
         />
@@ -279,12 +321,8 @@ export default function Origin() {
     const progress = Math.min((votes / 100) * 100, 100);
     
     const getCategoryColor = (cat: string) => {
-      switch (cat) {
-        case 'outer': return 'secondary';
-        case 'middle': return 'accent';
-        case 'inner': return 'primary';
-        default: return 'gray';
-      }
+      // 統一使用紫色系作為主色
+      return 'primary';
     };
     
     const color = getCategoryColor(category);
@@ -295,8 +333,8 @@ export default function Origin() {
           isSelected
             ? `border-${color}-500 bg-${color}-50 shadow-lg scale-105`
             : isLeading
-            ? 'border-accent-500 bg-accent-50 shadow-md'
-            : `border-gray-300 hover:border-${color}-300 hover:shadow-md hover:scale-102`
+            ? 'border-yellow-500 bg-yellow-50 shadow-md'
+            : `border-gray-300 hover:border-${color}-300 hover:bg-${color}-50 hover:shadow-md hover:scale-102`
         } ${isAnimating ? 'animate-pulse' : ''}`}
         onClick={onSelect}
       >
@@ -317,17 +355,17 @@ export default function Origin() {
               isSelected 
                 ? `text-${color}-800` 
                 : isLeading 
-                ? 'text-accent-800' 
+                ? 'text-yellow-800' 
                 : 'text-gray-900'
             }`}>{option.label}</span>
           </div>
           <div className="text-right">
-            <div className={`text-lg font-bold ${isLeading ? 'text-accent-600' : 'text-gray-600'}`}>
+            <div className={`text-lg font-bold ${isLeading ? 'text-yellow-600' : 'text-gray-600'}`}>
               {votes} 票
             </div>
             {isLeading && (
-              <div className="text-xs text-accent-600 font-medium">
-                ✓ 已達標
+              <div className="text-xs text-yellow-600 font-medium">
+                🏆 已達成
               </div>
             )}
           </div>
@@ -342,20 +380,69 @@ export default function Origin() {
             current={votes} 
             target={100} 
             className="h-2"
+            isLeading={isLeading}
           />
+          {!isLeading && votes < 100 && (
+            <div className="text-xs text-gray-500 mt-1">
+              還差 {100 - votes} 票就能晉級！
+            </div>
+          )}
         </div>
         
-        <p className={`text-sm ${
-          isSelected 
-            ? `text-${color}-700` 
-            : isLeading 
-            ? 'text-accent-700' 
-            : 'text-gray-600'
-        }`}>{option.description}</p>
+        <div className="space-y-2">
+          <p className={`text-sm ${
+            isSelected 
+              ? `text-${color}-700` 
+              : isLeading 
+              ? 'text-yellow-700' 
+              : 'text-gray-600'
+          }`}>
+            {/* 行動版顯示縮短描述，桌機版顯示完整描述 */}
+            <span className="block md:hidden">
+              {option.description.length > 15 
+                ? option.description.substring(0, 15) + '...' 
+                : option.description
+              }
+            </span>
+            <span className="hidden md:block">
+              {option.description}
+            </span>
+          </p>
+          
+          {/* 行動版「更多資訊」按鈕 */}
+          {option.description.length > 15 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const cardKey = `${category}-${option.id}`;
+                setExpandedCards(prev => ({
+                  ...prev,
+                  [cardKey]: !prev[cardKey]
+                }));
+              }}
+              className="md:hidden text-xs text-primary-600 hover:text-primary-800 underline"
+            >
+              {expandedCards[`${category}-${option.id}`] ? '收起' : '更多資訊'}
+            </button>
+          )}
+          
+          {/* 展開的完整描述 */}
+          {expandedCards[`${category}-${option.id}`] && option.description.length > 15 && (
+            <p className={`text-sm md:hidden ${
+              isSelected 
+                ? `text-${color}-700` 
+                : isLeading 
+                ? 'text-yellow-700' 
+                : 'text-gray-600'
+            }`}>
+              {option.description}
+            </p>
+          )}
+        </div>
         
         {isAnimating && (
-          <div className="absolute inset-0 bg-accent-100 bg-opacity-50 rounded-xl flex items-center justify-center">
-            <div className="text-accent-600 font-bold text-lg animate-bounce">
+          <div className="absolute inset-0 bg-primary-100 bg-opacity-50 rounded-xl flex items-center justify-center">
+            <div className="text-primary-600 font-bold text-lg animate-bounce">
               +1 票
             </div>
           </div>
@@ -394,6 +481,22 @@ export default function Origin() {
         </div>
         </div>
 
+      {/* 驗證錯誤提示 */}
+      {showValidationError && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-3 rounded-lg shadow-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium">
+                請完成以下選擇：{missingSelections.join('、')}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 投票成功提醒 */}
       {showVoteSuccess && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -401,9 +504,84 @@ export default function Origin() {
             <div className="text-6xl mb-4 animate-pulse">🎉</div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">投票完成！</h3>
             <p className="text-gray-600 mb-4">感謝您的參與，系統正在統計結果...</p>
-            <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-secondary-600"></div>
+            
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+              </div>
+              
+              <div className="text-sm text-gray-600 space-y-2">
+                <p>📅 3 天後公布結果，屆時會通知你</p>
+                <p>🔗 你也可以分享連結邀請朋友一起投票</p>
+              </div>
+              
+              <div className="flex space-x-3 justify-center">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('連結已複製到剪貼簿！');
+                  }}
+                  className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm"
+                >
+                  📋 複製連結
+                </button>
+                <button
+                  onClick={() => {
+                    // 這裡可以添加分享到社群的邏輯
+                    alert('分享功能開發中...');
+                  }}
+                  className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors text-sm"
+                >
+                  📱 分享到社群
+                </button>
+              </div>
+              
+              <p className="text-xs text-gray-500">
+                你的選擇可能影響小說的誕生！
+              </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top 3排名顯示 */}
+      {showTopRanking && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-4xl mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">🏆 目前 Top 3 排名</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(['outer', 'middle', 'inner'] as const).map((category, categoryIndex) => {
+                const categoryName = category === 'outer' ? '故事類型' : 
+                                   category === 'middle' ? '故事背景' : '故事主題';
+                const top3 = getTopRanking(category);
+                
+                return (
+                  <div key={category} className="space-y-2">
+                    <h4 className="font-semibold text-gray-800 text-center">{categoryName}</h4>
+                    <div className="space-y-1">
+                      {top3.map((item, index) => (
+                        <div key={item.id} className={`flex justify-between items-center p-2 rounded-lg ${
+                          index === 0 ? 'bg-yellow-100' : 
+                          index === 1 ? 'bg-gray-100' : 
+                          'bg-orange-100'
+                        }`}>
+                          <div className="flex items-center">
+                            <span className="text-lg mr-2">
+                              {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                            </span>
+                            <span className="text-sm font-medium">{item.label}</span>
+                          </div>
+                          <span className="text-sm text-gray-600">{item.votes} 票</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-500 text-center mt-3">
+              排名會持續更新，感謝您的參與！
+            </p>
           </div>
         </div>
       )}
@@ -412,9 +590,16 @@ export default function Origin() {
       {currentStep === 1 && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">為您喜歡的故事元素投票</h2>
-          <div className="bg-secondary-50 border border-secondary-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-secondary-800 text-center">
+          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-primary-800 text-center">
               💡 <strong>提示：</strong>系統會自動統計三大類別的最高票選項，當所有類別都有選項達到100票時，將自動生成AI故事！
+            </p>
+          </div>
+          
+          {/* 多選限制提示 */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+            <p className="text-sm text-yellow-800 text-center">
+              ⚠️ <strong>注意：</strong>每欄必須選擇一個選項才能投票
             </p>
           </div>
           
@@ -422,7 +607,7 @@ export default function Origin() {
             {/* 故事類型選項 */}
             <div>
               <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="w-4 h-4 bg-secondary-500 rounded-full mr-3"></span>
+                <span className="w-4 h-4 bg-primary-500 rounded-full mr-3"></span>
                 故事類型
               </h3>
               <div className="space-y-4">
@@ -449,7 +634,7 @@ export default function Origin() {
             {/* 故事背景選項 */}
             <div>
               <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="w-4 h-4 bg-accent-500 rounded-full mr-3"></span>
+                <span className="w-4 h-4 bg-primary-500 rounded-full mr-3"></span>
                 故事背景
               </h3>
               <div className="space-y-4">
@@ -508,7 +693,7 @@ export default function Origin() {
               disabled={!selectedOptions.outer || !selectedOptions.middle || !selectedOptions.inner}
               className={`px-12 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform ${
                 selectedOptions.outer && selectedOptions.middle && selectedOptions.inner
-                  ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 hover:scale-105 hover:shadow-xl shadow-lg'
+                  ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 hover:scale-105 hover:shadow-2xl shadow-xl ring-4 ring-primary-200 hover:ring-primary-300'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
@@ -520,9 +705,14 @@ export default function Origin() {
               </span>
             </button>
             {selectedOptions.outer && selectedOptions.middle && selectedOptions.inner && (
-              <p className="text-sm text-gray-600 mt-3 animate-pulse">
-                ✨ 準備好為您的選擇投票了嗎？
-              </p>
+              <div className="mt-3 space-y-1">
+                <p className="text-sm text-gray-600 animate-pulse">
+                  ✨ 準備好為您的選擇投票了嗎？
+                </p>
+                <p className="text-xs text-gray-500">
+                  ⏰ 剩下 3 天結束投票
+                </p>
+              </div>
             )}
           </div>
         </div>
