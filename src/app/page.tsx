@@ -1,10 +1,52 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import MobileRecommendations from '@/components/MobileRecommendations'
 
 export default function Home() {
+  const router = useRouter()
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+
+  const navigationItems = [
+    { name: '首頁', href: '/' },
+    { name: '起源', href: '/origin' },
+    { name: '收藏', href: '/collection' },
+    { name: '通知', href: '/notifications' }
+  ]
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe) {
+      // 向左滑動，下一個頁面
+      router.push('/origin')
+    } else if (isRightSwipe) {
+      // 向右滑動，上一個頁面（首頁沒有上一個，所以不處理）
+      return
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div 
+      className="space-y-6"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* 頁面標題 */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">最新章節</h1>

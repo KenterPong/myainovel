@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Origin() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [selectedOptions, setSelectedOptions] = useState({
     outer: '',
     middle: '',
@@ -36,6 +40,32 @@ export default function Origin() {
     middle: false,
     inner: false
   });
+
+  // 滑動處理函數
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      // 向左滑動，下一個頁面
+      router.push('/collection');
+    } else if (isRightSwipe) {
+      // 向右滑動，上一個頁面
+      router.push('/');
+    }
+  };
 
   // 三圈選項
   const options = {
@@ -361,8 +391,12 @@ export default function Origin() {
     const progress = Math.min((votes / 100) * 100, 100);
     
     const getCategoryColor = (cat: string) => {
-      // 統一使用紫色系作為主色
-      return 'primary';
+      switch (cat) {
+        case 'outer': return 'primary';
+        case 'middle': return 'secondary';
+        case 'inner': return 'accent';
+        default: return 'primary';
+      }
     };
     
     const getCategoryChipClass = (cat: string) => {
@@ -376,15 +410,57 @@ export default function Origin() {
     
     const color = getCategoryColor(category);
     
+    const getCardClassName = () => {
+      let baseClass = 'relative p-3 md:p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 transform';
+      
+      if (isSelected) {
+        switch (category) {
+          case 'outer': return `${baseClass} border-primary-500 bg-primary-50 shadow-lg scale-105`;
+          case 'middle': return `${baseClass} border-secondary-500 bg-secondary-50 shadow-lg scale-105`;
+          case 'inner': return `${baseClass} border-accent-500 bg-accent-50 shadow-lg scale-105`;
+          default: return `${baseClass} border-primary-500 bg-primary-50 shadow-lg scale-105`;
+        }
+      } else if (isLeading) {
+        return `${baseClass} border-yellow-500 bg-yellow-50 shadow-md`;
+      } else {
+        switch (category) {
+          case 'outer': return `${baseClass} border-gray-300 hover:border-primary-300 hover:bg-primary-50 hover:shadow-md hover:scale-102`;
+          case 'middle': return `${baseClass} border-gray-300 hover:border-secondary-300 hover:bg-secondary-50 hover:shadow-md hover:scale-102`;
+          case 'inner': return `${baseClass} border-gray-300 hover:border-accent-300 hover:bg-accent-50 hover:shadow-md hover:scale-102`;
+          default: return `${baseClass} border-gray-300 hover:border-primary-300 hover:bg-primary-50 hover:shadow-md hover:scale-102`;
+        }
+      }
+    };
+
+    const getCheckboxClassName = () => {
+      if (isSelected) {
+        switch (category) {
+          case 'outer': return 'w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center mr-2 md:mr-3 border-primary-500 bg-primary-500';
+          case 'middle': return 'w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center mr-2 md:mr-3 border-secondary-500 bg-secondary-500';
+          case 'inner': return 'w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center mr-2 md:mr-3 border-accent-500 bg-accent-500';
+          default: return 'w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center mr-2 md:mr-3 border-primary-500 bg-primary-500';
+        }
+      }
+      return 'w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center mr-2 md:mr-3 border-gray-300';
+    };
+
+    const getTextClassName = () => {
+      if (isSelected) {
+        switch (category) {
+          case 'outer': return 'font-semibold text-base md:text-lg text-primary-800';
+          case 'middle': return 'font-semibold text-base md:text-lg text-secondary-800';
+          case 'inner': return 'font-semibold text-base md:text-lg text-accent-800';
+          default: return 'font-semibold text-base md:text-lg text-primary-800';
+        }
+      } else if (isLeading) {
+        return 'font-semibold text-base md:text-lg text-yellow-800';
+      }
+      return 'font-semibold text-base md:text-lg text-gray-900';
+    };
+
     return (
       <div
-        className={`relative p-3 md:p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 transform ${
-          isSelected
-            ? `border-${color}-500 bg-${color}-50 shadow-lg scale-105`
-            : isLeading
-            ? 'border-yellow-500 bg-yellow-50 shadow-md'
-            : `border-gray-300 hover:border-${color}-300 hover:bg-${color}-50 hover:shadow-md hover:scale-102`
-        } ${isAnimating ? 'animate-pulse' : ''}`}
+        className={`${getCardClassName()} ${isAnimating ? 'animate-pulse' : ''}`}
         onClick={onSelect}
       >
         {/* 分類標籤 */}
@@ -394,24 +470,14 @@ export default function Origin() {
         
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
-            <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center mr-2 md:mr-3 ${
-              isSelected 
-                ? `border-${color}-500 bg-${color}-500` 
-                : `border-gray-300`
-            }`}>
+            <div className={getCheckboxClassName()}>
               {isSelected && (
                 <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               )}
             </div>
-            <span className={`font-semibold text-base md:text-lg ${
-              isSelected 
-                ? `text-${color}-800` 
-                : isLeading 
-                ? 'text-yellow-800' 
-                : 'text-gray-900'
-            }`}>{option.label}</span>
+            <span className={getTextClassName()}>{option.label}</span>
           </div>
           <div className="text-right">
             <div className={`text-base md:text-lg font-bold ${isLeading ? 'text-yellow-600' : 'text-gray-600'}`}>
@@ -509,7 +575,12 @@ export default function Origin() {
   };
 
     return (
-      <div className="space-y-6">
+      <div 
+        className="space-y-6"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* 頁面標題 */}
         <div className="text-center mb-8">
           <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-3 md:mb-4">為您喜歡的故事元素投票</h1>
