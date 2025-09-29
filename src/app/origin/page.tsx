@@ -512,9 +512,9 @@ export default function Origin() {
       <div className="space-y-6">
         {/* 頁面標題 */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">為您喜歡的故事元素投票</h1>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            系統會自動統計三大類別的最高票選項，當所有類別都有選項達到100票時，將自動生成AI故事！每欄必須選擇一個選項才能投票。
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-3 md:mb-4">為您喜歡的故事元素投票</h1>
+          <p className="text-sm md:text-lg text-gray-600 max-w-2xl mx-auto px-4">
+            選擇故事元素，AI將為您創作獨特故事
           </p>
         </div>
 
