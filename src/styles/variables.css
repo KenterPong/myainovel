@@ -94,6 +94,31 @@
   --error-500: #ef4444;
   --info-500: #3b82f6;
 
+  /* 分類專用色彩 - 符合網站色彩計畫 */
+  /* 故事類型 - 薰衣草紫系 (主色系) */
+  --category-primary-400: #B39DDB;
+  --category-primary-600: #9c7dff;
+  --category-primary-50: #f8f6ff;
+  --category-primary-100: #f0ebff;
+  --category-primary-800: #7a59ff;
+  --category-primary-200: #e0d7ff;
+  
+  /* 故事背景 - 珊瑚粉系 (輔助色系) */
+  --category-secondary-400: #FFB6B9;
+  --category-secondary-600: #e68a8d;
+  --category-secondary-50: #fef2f2;
+  --category-secondary-100: #fce7e7;
+  --category-secondary-800: #b33335;
+  --category-secondary-200: #f8d1d1;
+  
+  /* 故事主題 - 嫩綠系 (中間色系) */
+  --category-accent-400: #A8E6CF;
+  --category-accent-600: #22c55e;
+  --category-accent-50: #f0fdf4;
+  --category-accent-100: #dcfce7;
+  --category-accent-800: #15803d;
+  --category-accent-200: #bbf7d0;
+
   /* 字體 */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   --font-serif: 'Georgia', 'Times New Roman', serif;

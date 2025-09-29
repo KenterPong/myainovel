@@ -30,6 +30,12 @@ export default function Origin() {
   const [missingSelections, setMissingSelections] = useState<string[]>([]);
   const [expandedCards, setExpandedCards] = useState<{[key: string]: boolean}>({});
   const [showTopRanking, setShowTopRanking] = useState(false);
+  const [showRankingContent, setShowRankingContent] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({
+    outer: true,  // 預設展開第一個分類
+    middle: false,
+    inner: false
+  });
 
   // 三圈選項
   const options = {
@@ -92,6 +98,32 @@ export default function Origin() {
       ...prev,
       [category]: optionId
     }));
+    
+    // 自動展開下一個未完成的分類
+    if (category === 'outer' && !selectedOptions.middle) {
+      setExpandedCategories(prev => ({
+        ...prev,
+        outer: false,
+        middle: true
+      }));
+    } else if (category === 'middle' && !selectedOptions.inner) {
+      setExpandedCategories(prev => ({
+        ...prev,
+        middle: false,
+        inner: true
+      }));
+    } else if (category === 'inner') {
+      // 第三個選擇完成後，自動滾動到投票按鈕
+      setTimeout(() => {
+        const voteButton = document.querySelector('[data-vote-button]');
+        if (voteButton) {
+          voteButton.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 300);
+    }
   };
 
   // 獲取每個類別中票數最高的選項
@@ -199,10 +231,9 @@ export default function Origin() {
       setShowVoteSuccess(true);
       setTimeout(() => setShowVoteSuccess(false), 3000);
       
-      // 顯示Top 3排名
+      // 顯示排名內容取代投票按鈕
       setTimeout(() => {
-        setShowTopRanking(true);
-        setTimeout(() => setShowTopRanking(false), 5000);
+        setShowRankingContent(true);
       }, 1000);
       
       // 計算包含用戶投票後的總票數
@@ -282,18 +313,27 @@ export default function Origin() {
   };
 
   // 進度條組件
-  const ProgressBar = ({ current, target = 100, className = "", isLeading = false }: { current: number; target?: number; className?: string; isLeading?: boolean }) => {
+  const ProgressBar = ({ current, target = 100, className = "", isLeading = false, category = "outer" }: { current: number; target?: number; className?: string; isLeading?: boolean; category?: string }) => {
     const percentage = Math.min((current / target) * 100, 100);
     const isComplete = current >= target;
+    
+    // 根據分類選擇顏色類別 - 符合網站色彩計畫
+    const getProgressBarClass = (cat: string) => {
+      if (isComplete || isLeading) {
+        return 'bg-gradient-to-r from-yellow-400 to-yellow-600';
+      }
+      switch (cat) {
+        case 'outer': return 'progress-bar-primary';  // 薰衣草紫系
+        case 'middle': return 'progress-bar-secondary';  // 珊瑚粉系
+        case 'inner': return 'progress-bar-accent';  // 嫩綠系
+        default: return 'bg-gradient-to-r from-primary-400 to-primary-600';
+      }
+    };
     
     return (
       <div className={`w-full bg-gray-200 rounded-full h-2 ${className}`}>
         <div 
-          className={`h-2 rounded-full transition-all duration-500 ease-out ${
-            isComplete || isLeading
-              ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' 
-              : 'bg-gradient-to-r from-primary-400 to-primary-600'
-          }`}
+          className={`h-2 rounded-full transition-all duration-500 ease-out ${getProgressBarClass(category)}`}
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -325,11 +365,20 @@ export default function Origin() {
       return 'primary';
     };
     
+    const getCategoryChipClass = (cat: string) => {
+      switch (cat) {
+        case 'outer': return 'category-chip primary';  // 薰衣草紫系
+        case 'middle': return 'category-chip secondary';  // 珊瑚粉系
+        case 'inner': return 'category-chip accent';  // 嫩綠系
+        default: return 'category-chip';
+      }
+    };
+    
     const color = getCategoryColor(category);
     
     return (
       <div
-        className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 transform ${
+        className={`relative p-3 md:p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 transform ${
           isSelected
             ? `border-${color}-500 bg-${color}-50 shadow-lg scale-105`
             : isLeading
@@ -338,20 +387,25 @@ export default function Origin() {
         } ${isAnimating ? 'animate-pulse' : ''}`}
         onClick={onSelect}
       >
-        <div className="flex items-center justify-between mb-3">
+        {/* 分類標籤 */}
+        <div className={getCategoryChipClass(category)}>
+          {category === 'outer' ? '故事類型' : category === 'middle' ? '故事背景' : '故事主題'}
+        </div>
+        
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
-            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 ${
+            <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center mr-2 md:mr-3 ${
               isSelected 
                 ? `border-${color}-500 bg-${color}-500` 
                 : `border-gray-300`
             }`}>
               {isSelected && (
-                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               )}
             </div>
-            <span className={`font-semibold text-lg ${
+            <span className={`font-semibold text-base md:text-lg ${
               isSelected 
                 ? `text-${color}-800` 
                 : isLeading 
@@ -360,7 +414,7 @@ export default function Origin() {
             }`}>{option.label}</span>
           </div>
           <div className="text-right">
-            <div className={`text-lg font-bold ${isLeading ? 'text-yellow-600' : 'text-gray-600'}`}>
+            <div className={`text-base md:text-lg font-bold ${isLeading ? 'text-yellow-600' : 'text-gray-600'}`}>
               {votes} 票
             </div>
             {isLeading && (
@@ -372,25 +426,28 @@ export default function Origin() {
         </div>
         
         <div className="mb-2">
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
+          <div className="flex justify-between items-center text-xs md:text-sm text-gray-600 mb-1">
             <span>進度</span>
-            <span>{Math.round(progress)}%</span>
+            <div className="flex items-center space-x-2">
+              <span>{Math.round(progress)}%</span>
+              {!isLeading && votes < 100 && (
+                <span className="text-xs text-gray-500">
+                  還差 {100 - votes} 票
+                </span>
+              )}
+            </div>
           </div>
           <ProgressBar 
             current={votes} 
             target={100} 
             className="h-2"
             isLeading={isLeading}
+            category={category}
           />
-          {!isLeading && votes < 100 && (
-            <div className="text-xs text-gray-500 mt-1">
-              還差 {100 - votes} 票就能晉級！
-            </div>
-          )}
         </div>
         
-        <div className="space-y-2">
-          <p className={`text-sm ${
+        <div className="space-y-1">
+          <p className={`text-xs md:text-sm ${
             isSelected 
               ? `text-${color}-700` 
               : isLeading 
@@ -428,7 +485,7 @@ export default function Origin() {
           
           {/* 展開的完整描述 */}
           {expandedCards[`${category}-${option.id}`] && option.description.length > 15 && (
-            <p className={`text-sm md:hidden ${
+            <p className={`text-xs md:text-sm md:hidden ${
               isSelected 
                 ? `text-${color}-700` 
                 : isLeading 
@@ -454,264 +511,334 @@ export default function Origin() {
     return (
       <div className="space-y-6">
         {/* 頁面標題 */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">故事起源</h1>
-        <p className="text-gray-600">選擇您的偏好，讓AI為您創作獨特的故事起源</p>
-      </div>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">為您喜歡的故事元素投票</h1>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            系統會自動統計三大類別的最高票選項，當所有類別都有選項達到100票時，將自動生成AI故事！每欄必須選擇一個選項才能投票。
+          </p>
+        </div>
 
-      {/* 步驟指示器 */}
-      <div className="flex justify-center mb-8">
-        <div className="flex items-center space-x-4">
-          {[1, 2].map((step) => (
-            <div key={step} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                currentStep >= step 
-                  ? 'bg-purple-600 text-white' 
-                  : 'bg-purple-200 text-purple-800'
-              }`}>
-                {step}
+        {/* 驗證錯誤提示 */}
+        {showValidationError && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-3 rounded-lg shadow-lg">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">
+                  請完成以下選擇：{missingSelections.join('、')}
+                </span>
               </div>
-              {step < 2 && (
-                <div className={`w-8 h-0.5 ${
-                  currentStep > step ? 'bg-purple-600' : 'bg-purple-300'
-                }`} />
-              )}
-            </div>
-          ))}
-        </div>
-        </div>
-
-      {/* 驗證錯誤提示 */}
-      {showValidationError && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-3 rounded-lg shadow-lg">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-              <span className="font-medium">
-                請完成以下選擇：{missingSelections.join('、')}
-              </span>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 投票成功提醒 */}
-      {showVoteSuccess && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center animate-bounce shadow-2xl">
-            <div className="text-6xl mb-4 animate-pulse">🎉</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">投票完成！</h3>
-            <p className="text-gray-600 mb-4">感謝您的參與，系統正在統計結果...</p>
-            
-            <div className="space-y-4">
-              <div className="flex justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
-              </div>
+        {/* 投票成功提醒 */}
+        {showVoteSuccess && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
+              <div className="text-6xl mb-4">🎉</div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">投票完成！</h3>
+              <p className="text-gray-600 mb-4">感謝您的參與，系統正在統計結果...</p>
               
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>📅 3 天後公布結果，屆時會通知你</p>
-                <p>🔗 你也可以分享連結邀請朋友一起投票</p>
-              </div>
-              
-              <div className="flex space-x-3 justify-center">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert('連結已複製到剪貼簿！');
-                  }}
-                  className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm"
-                >
-                  📋 複製連結
-                </button>
-                <button
-                  onClick={() => {
-                    // 這裡可以添加分享到社群的邏輯
-                    alert('分享功能開發中...');
-                  }}
-                  className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors text-sm"
-                >
-                  📱 分享到社群
-                </button>
-              </div>
-              
-              <p className="text-xs text-gray-500">
-                你的選擇可能影響小說的誕生！
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Top 3排名顯示 */}
-      {showTopRanking && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-4xl mx-4">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">🏆 目前 Top 3 排名</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(['outer', 'middle', 'inner'] as const).map((category, categoryIndex) => {
-                const categoryName = category === 'outer' ? '故事類型' : 
-                                   category === 'middle' ? '故事背景' : '故事主題';
-                const top3 = getTopRanking(category);
-                
-                return (
-                  <div key={category} className="space-y-2">
-                    <h4 className="font-semibold text-gray-800 text-center">{categoryName}</h4>
-                    <div className="space-y-1">
-                      {top3.map((item, index) => (
-                        <div key={item.id} className={`flex justify-between items-center p-2 rounded-lg ${
-                          index === 0 ? 'bg-yellow-100' : 
-                          index === 1 ? 'bg-gray-100' : 
-                          'bg-orange-100'
-                        }`}>
-                          <div className="flex items-center">
-                            <span className="text-lg mr-2">
-                              {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-                            </span>
-                            <span className="text-sm font-medium">{item.label}</span>
-                          </div>
-                          <span className="text-sm text-gray-600">{item.votes} 票</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-xs text-gray-500 text-center mt-3">
-              排名會持續更新，感謝您的參與！
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 步驟1：投票選擇 */}
-      {currentStep === 1 && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">為您喜歡的故事元素投票</h2>
-          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-primary-800 text-center">
-              💡 <strong>提示：</strong>系統會自動統計三大類別的最高票選項，當所有類別都有選項達到100票時，將自動生成AI故事！
-            </p>
-          </div>
-          
-          {/* 多選限制提示 */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
-            <p className="text-sm text-yellow-800 text-center">
-              ⚠️ <strong>注意：</strong>每欄必須選擇一個選項才能投票
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* 故事類型選項 */}
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="w-4 h-4 bg-primary-500 rounded-full mr-3"></span>
-                故事類型
-              </h3>
               <div className="space-y-4">
-                {options.outer.map((option) => {
-                  const voteData = getCurrentVoteData('outer');
-                  const votes = voteData[option.id as keyof typeof voteData] || 0;
-                  const isLeading = votes >= 100;
-                  
-                  return (
-                    <OptionCard
-                      key={option.id}
-                      option={option}
-                      category="outer"
-                      votes={votes}
-                      isSelected={selectedOptions.outer === option.id}
-                      isLeading={isLeading}
-                      onSelect={() => handleOptionSelect('outer', option.id)}
-                    />
-                  );
-                })}
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                </div>
+                
+                <div className="text-sm text-gray-600 space-y-2">
+                  <p>📅 3 天後公布結果，屆時會通知你</p>
+                  <p>🔗 你也可以分享連結邀請朋友一起投票</p>
+                </div>
+                
+                <div className="flex space-x-3 justify-center">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      alert('連結已複製到剪貼簿！');
+                    }}
+                    className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm"
+                  >
+                    📋 複製連結
+                  </button>
+                  <button
+                    onClick={() => {
+                      // 這裡可以添加分享到社群的邏輯
+                      alert('分享功能開發中...');
+                    }}
+                    className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors text-sm"
+                  >
+                    📱 分享到社群
+                  </button>
+                </div>
+                
+                <p className="text-xs text-gray-500">
+                  你的選擇可能影響小說的誕生！
+                </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 步驟1：投票選擇 */}
+        {currentStep === 1 && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+          
+          <div className="space-y-6">
+            {/* 故事類型選項 */}
+            <div className={`category-section ${expandedCategories.outer ? 'expanded' : 'collapsed'}`} style={{ backgroundColor: 'var(--category-primary-50)' }}>
+              <div 
+                className="category-header"
+                onClick={() => setExpandedCategories(prev => ({ ...prev, outer: !prev.outer }))}
+              >
+                <div className="flex items-center">
+                  <div className="category-title-card primary">
+                    🧙 故事類型
+                  </div>
+                  <div className="category-status">
+                    {selectedOptions.outer ? (
+                      <span className="completed">
+                        ✅ 已完成
+                      </span>
+                    ) : (
+                      <span className="pending">
+                        ⏳ 待選擇
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-gray-500">
+                  <svg 
+                    className={`w-6 h-6 chevron ${expandedCategories.outer ? 'rotated' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              
+              {expandedCategories.outer && (
+                <div className="category-content space-y-3">
+                  {options.outer.map((option) => {
+                    const voteData = getCurrentVoteData('outer');
+                    const votes = voteData[option.id as keyof typeof voteData] || 0;
+                    const isLeading = votes >= 100;
+                    
+                    return (
+                      <OptionCard
+                        key={option.id}
+                        option={option}
+                        category="outer"
+                        votes={votes}
+                        isSelected={selectedOptions.outer === option.id}
+                        isLeading={isLeading}
+                        onSelect={() => handleOptionSelect('outer', option.id)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* 故事背景選項 */}
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="w-4 h-4 bg-primary-500 rounded-full mr-3"></span>
-                故事背景
-              </h3>
-              <div className="space-y-4">
-                {options.middle.map((option) => {
-                  const voteData = getCurrentVoteData('middle');
-                  const votes = voteData[option.id as keyof typeof voteData] || 0;
-                  const isLeading = votes >= 100;
-                  
-                  return (
-                    <OptionCard
-                      key={option.id}
-                      option={option}
-                      category="middle"
-                      votes={votes}
-                      isSelected={selectedOptions.middle === option.id}
-                      isLeading={isLeading}
-                      onSelect={() => handleOptionSelect('middle', option.id)}
-                    />
-                  );
-                })}
+            <div className={`category-section ${expandedCategories.middle ? 'expanded' : 'collapsed'}`} style={{ backgroundColor: 'var(--category-secondary-50)' }}>
+              <div 
+                className="category-header"
+                onClick={() => setExpandedCategories(prev => ({ ...prev, middle: !prev.middle }))}
+              >
+                <div className="flex items-center">
+                  <div className="category-title-card secondary">
+                    🏞 故事背景
+                  </div>
+                  <div className="category-status">
+                    {selectedOptions.middle ? (
+                      <span className="completed">
+                        ✅ 已完成
+                      </span>
+                    ) : (
+                      <span className="pending">
+                        ⏳ 待選擇
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-gray-500">
+                  <svg 
+                    className={`w-6 h-6 chevron ${expandedCategories.middle ? 'rotated' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
+              
+              {expandedCategories.middle && (
+                <div className="category-content space-y-3">
+                  {options.middle.map((option) => {
+                    const voteData = getCurrentVoteData('middle');
+                    const votes = voteData[option.id as keyof typeof voteData] || 0;
+                    const isLeading = votes >= 100;
+                    
+                    return (
+                      <OptionCard
+                        key={option.id}
+                        option={option}
+                        category="middle"
+                        votes={votes}
+                        isSelected={selectedOptions.middle === option.id}
+                        isLeading={isLeading}
+                        onSelect={() => handleOptionSelect('middle', option.id)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* 故事主題選項 */}
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="w-4 h-4 bg-primary-500 rounded-full mr-3"></span>
-                故事主題
-              </h3>
-              <div className="space-y-4">
-                {options.inner.map((option) => {
-                  const voteData = getCurrentVoteData('inner');
-                  const votes = voteData[option.id as keyof typeof voteData] || 0;
-                  const isLeading = votes >= 100;
-                  
-                  return (
-                    <OptionCard
-                      key={option.id}
-                      option={option}
-                      category="inner"
-                      votes={votes}
-                      isSelected={selectedOptions.inner === option.id}
-                      isLeading={isLeading}
-                      onSelect={() => handleOptionSelect('inner', option.id)}
-                    />
-                  );
-                })}
+            <div className={`category-section ${expandedCategories.inner ? 'expanded' : 'collapsed'}`} style={{ backgroundColor: 'var(--category-accent-50)' }}>
+              <div 
+                className="category-header"
+                onClick={() => setExpandedCategories(prev => ({ ...prev, inner: !prev.inner }))}
+              >
+                <div className="flex items-center">
+                  <div className="category-title-card accent">
+                    💞 故事主題
+                  </div>
+                  <div className="category-status">
+                    {selectedOptions.inner ? (
+                      <span className="completed">
+                        ✅ 已完成
+                      </span>
+                    ) : (
+                      <span className="pending">
+                        ⏳ 待選擇
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-gray-500">
+                  <svg 
+                    className={`w-6 h-6 chevron ${expandedCategories.inner ? 'rotated' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
+              
+              {expandedCategories.inner && (
+                <div className="category-content space-y-3">
+                  {options.inner.map((option) => {
+                    const voteData = getCurrentVoteData('inner');
+                    const votes = voteData[option.id as keyof typeof voteData] || 0;
+                    const isLeading = votes >= 100;
+                    
+                    return (
+                      <OptionCard
+                        key={option.id}
+                        option={option}
+                        category="inner"
+                        votes={votes}
+                        isSelected={selectedOptions.inner === option.id}
+                        isLeading={isLeading}
+                        onSelect={() => handleOptionSelect('inner', option.id)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 投票按鈕 */}
-          <div className="text-center mt-12">
-            <button
-              onClick={handleVote}
-              disabled={!selectedOptions.outer || !selectedOptions.middle || !selectedOptions.inner}
-              className={`px-12 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform ${
-                selectedOptions.outer && selectedOptions.middle && selectedOptions.inner
-                  ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 hover:scale-105 hover:shadow-2xl shadow-xl ring-4 ring-primary-200 hover:ring-primary-300'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              <span className="flex items-center justify-center">
-                <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                投下一票
-              </span>
-            </button>
-            {selectedOptions.outer && selectedOptions.middle && selectedOptions.inner && (
-              <div className="mt-3 space-y-1">
-                <p className="text-sm text-gray-600 animate-pulse">
-                  ✨ 準備好為您的選擇投票了嗎？
+          {/* 投票按鈕或排名顯示 */}
+          <div className="text-center mt-12" data-vote-button>
+            {!showRankingContent ? (
+              // 投票按鈕
+              <>
+                <button
+                  onClick={handleVote}
+                  disabled={!selectedOptions.outer || !selectedOptions.middle || !selectedOptions.inner}
+                  className={`px-12 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform ${
+                    selectedOptions.outer && selectedOptions.middle && selectedOptions.inner
+                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 hover:scale-105 hover:shadow-2xl shadow-xl ring-4 ring-primary-200 hover:ring-primary-300'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="flex items-center justify-center">
+                    <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    投下一票
+                  </span>
+                </button>
+                {selectedOptions.outer && selectedOptions.middle && selectedOptions.inner && (
+                  <div className="mt-3 space-y-1">
+                    <p className="text-sm text-gray-600 animate-pulse">
+                      ✨ 準備好為您的選擇投票了嗎？
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ⏰ 剩下 3 天結束投票
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              // Top 3排名顯示
+              <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-4xl mx-auto animate-slide-up">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">🏆 目前 Top 3 排名</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(['outer', 'middle', 'inner'] as const).map((category, categoryIndex) => {
+                    const categoryName = category === 'outer' ? '故事類型' : 
+                                       category === 'middle' ? '故事背景' : '故事主題';
+                    const top3 = getTopRanking(category);
+                    
+                    return (
+                      <div key={category} className="space-y-2">
+                        <h4 className="font-semibold text-gray-800 text-center">{categoryName}</h4>
+                        <div className="space-y-1">
+                          {top3.map((item, index) => (
+                            <div key={item.id} className={`flex justify-between items-center p-2 rounded-lg ${
+                              index === 0 ? 'bg-yellow-100' : 
+                              index === 1 ? 'bg-gray-100' : 
+                              'bg-orange-100'
+                            }`}>
+                              <div className="flex items-center">
+                                <span className="text-lg mr-2">
+                                  {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                                </span>
+                                <span className="text-sm font-medium">{item.label}</span>
+                              </div>
+                              <span className="text-sm text-gray-600">{item.votes} 票</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 text-center mt-3">
+                  排名會持續更新，感謝您的參與！
                 </p>
-                <p className="text-xs text-gray-500">
-                  ⏰ 剩下 3 天結束投票
-                </p>
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => {
+                      setShowRankingContent(false);
+                      setSelectedOptions({ outer: '', middle: '', inner: '' });
+                      setExpandedCategories({ outer: true, middle: false, inner: false });
+                    }}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+                  >
+                    重新投票
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -748,6 +875,8 @@ export default function Origin() {
                 setSelectedOptions({ outer: '', middle: '', inner: '' });
                 setSelectedResults({ outer: '', middle: '', inner: '' });
                 setVoteCounts({ outer: {}, middle: {}, inner: {} });
+                setShowRankingContent(false);
+                setExpandedCategories({ outer: true, middle: false, inner: false });
               }}
               className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
             >

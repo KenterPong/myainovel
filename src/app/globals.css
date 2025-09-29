@@ -291,3 +291,183 @@ h3 {
 .animate-slide-up {
   animation: slideUp 0.5s ease-out;
 }
+
+/* 分類背景區塊樣式 */
+.category-section {
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.category-section.collapsed {
+  opacity: 0.6;
+}
+
+.category-section.expanded {
+  opacity: 1;
+}
+
+/* 分類標題卡片樣式 */
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.category-header:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.category-title-card {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  font-size: 1.125rem;
+  color: white;
+  margin-right: 1rem;
+}
+
+.category-title-card.primary {
+  background-color: var(--category-primary-600);
+}
+
+.category-title-card.secondary {
+  background-color: var(--category-secondary-600);
+}
+
+.category-title-card.accent {
+  background-color: var(--category-accent-600);
+}
+
+/* 分類狀態指示器 */
+.category-status {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+.category-status.completed {
+  color: #10b981;
+}
+
+.category-status.pending {
+  color: #f59e0b;
+}
+
+/* 分類標籤樣式 */
+.category-chip {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  border: 1px solid;
+  margin-bottom: 0.5rem;
+}
+
+.category-chip.primary {
+  background-color: var(--category-primary-100);
+  color: var(--category-primary-800);
+  border-color: var(--category-primary-200);
+}
+
+.category-chip.secondary {
+  background-color: var(--category-secondary-100);
+  color: var(--category-secondary-800);
+  border-color: var(--category-secondary-200);
+}
+
+.category-chip.accent {
+  background-color: var(--category-accent-100);
+  color: var(--category-accent-800);
+  border-color: var(--category-accent-200);
+}
+
+/* 進度條顏色變體 - 符合網站色彩計畫 */
+.progress-bar-primary {
+  background: linear-gradient(to right, var(--category-primary-400), var(--category-primary-600));
+}
+
+.progress-bar-secondary {
+  background: linear-gradient(to right, var(--category-secondary-400), var(--category-secondary-600));
+}
+
+.progress-bar-accent {
+  background: linear-gradient(to right, var(--category-accent-400), var(--category-accent-600));
+}
+
+/* 摺疊/展開動畫 */
+@keyframes expandDown {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+  to {
+    max-height: 1000px;
+    opacity: 1;
+  }
+}
+
+@keyframes collapseUp {
+  from {
+    max-height: 1000px;
+    opacity: 1;
+  }
+  to {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+
+.category-content {
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
+}
+
+.category-content.expanding {
+  animation: expandDown 0.3s ease-out;
+}
+
+.category-content.collapsing {
+  animation: collapseUp 0.3s ease-in;
+}
+
+/* 箭頭旋轉動畫 */
+.chevron {
+  transition: transform 0.2s ease-in-out;
+}
+
+.chevron.rotated {
+  transform: rotate(180deg);
+}
+
+/* 行動端優化 */
+@media (max-width: 768px) {
+  .category-section {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .category-title-card {
+    font-size: 1rem;
+    padding: 0.375rem 0.75rem;
+  }
+  
+  .category-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .category-status {
+    font-size: 0.875rem;
+  }
+}
