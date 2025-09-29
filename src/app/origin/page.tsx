@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePageSwipe, useStepSwipe, useCardSwipe } from '@/types/useSwipe';
 
 export default function Origin() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  // 使用共用的滑動 hooks
+  const pageSwipe = usePageSwipe();
+  const stepSwipe = useStepSwipe(currentStep, setCurrentStep);
   const [selectedOptions, setSelectedOptions] = useState({
     outer: '',
     middle: '',
@@ -51,31 +53,6 @@ export default function Origin() {
     return selectedOption ? selectedOption.label : null;
   };
 
-  // 滑動處理函數
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe) {
-      // 向左滑動，下一個頁面
-      router.push('/collection');
-    } else if (isRightSwipe) {
-      // 向右滑動，上一個頁面
-      router.push('/');
-    }
-  };
 
   // 三圈選項
   const options = {
@@ -401,6 +378,12 @@ export default function Origin() {
     isLeading: boolean;
     onSelect: () => void;
   }) => {
+    // 使用卡片專用的滑動 hook
+    const cardSwipe = useCardSwipe(
+      onSelect,
+      () => setCurrentStep(prev => Math.min(prev + 1, 3)), // 左滑動
+      () => setCurrentStep(prev => Math.max(prev - 1, 1))  // 右滑動
+    );
     const voteKey = `${category}-${option.id}`;
     const isAnimating = animatingVotes[voteKey];
     const progress = Math.min((votes / 100) * 100, 100);
@@ -554,6 +537,9 @@ export default function Origin() {
       <div
         className={`${getCardClassName()} ${isAnimating ? 'animate-pulse' : ''}`}
         style={getInlineStyle()}
+        onTouchStart={cardSwipe.touchStart}
+        onTouchMove={cardSwipe.touchMove}
+        onTouchEnd={cardSwipe.touchEnd}
         onClick={onSelect}
       >
         {/* 分類標籤 */}
@@ -690,9 +676,9 @@ export default function Origin() {
     return (
       <div 
         className="space-y-6"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onTouchStart={pageSwipe.touchStart}
+        onTouchMove={pageSwipe.touchMove}
+        onTouchEnd={pageSwipe.touchEnd}
       >
         {/* 頁面標題 */}
         <div className="text-center mb-8">
