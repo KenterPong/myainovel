@@ -41,6 +41,16 @@ export default function Origin() {
     inner: false
   });
 
+  // 獲取選中選項的標籤
+  const getSelectedOptionLabel = (category: string) => {
+    const selectedId = selectedOptions[category as keyof typeof selectedOptions];
+    if (!selectedId) return null;
+    
+    const categoryOptions = options[category as keyof typeof options];
+    const selectedOption = categoryOptions.find(option => option.id === selectedId);
+    return selectedOption ? selectedOption.label : null;
+  };
+
   // 滑動處理函數
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
@@ -143,7 +153,12 @@ export default function Origin() {
         inner: true
       }));
     } else if (category === 'inner') {
-      // 第三個選擇完成後，自動滾動到投票按鈕
+      // 第三個選擇完成後，自動收起來並滾動到投票按鈕
+      setExpandedCategories(prev => ({
+        ...prev,
+        inner: false
+      }));
+      
       setTimeout(() => {
         const voteButton = document.querySelector('[data-vote-button]');
         if (voteButton) {
@@ -415,10 +430,10 @@ export default function Origin() {
       
       if (isSelected) {
         switch (category) {
-          case 'outer': return `${baseClass} border-primary-500 bg-primary-50 shadow-lg scale-105`;
-          case 'middle': return `${baseClass} border-secondary-500 bg-secondary-50 shadow-lg scale-105`;
-          case 'inner': return `${baseClass} border-accent-500 bg-accent-50 shadow-lg scale-105`;
-          default: return `${baseClass} border-primary-500 bg-primary-50 shadow-lg scale-105`;
+          case 'outer': return `relative p-4 md:p-5 border-4 border-solid border-primary-700 bg-primary-100 shadow-xl scale-105 cursor-pointer transition-all duration-300 transform ring-2 ring-primary-300`;
+          case 'middle': return `relative p-4 md:p-5 border-4 border-solid border-secondary-700 bg-secondary-100 shadow-xl scale-105 cursor-pointer transition-all duration-300 transform ring-2 ring-secondary-300`;
+          case 'inner': return `relative p-4 md:p-5 border-4 border-solid border-accent-700 bg-accent-100 shadow-xl scale-105 cursor-pointer transition-all duration-300 transform ring-2 ring-accent-300`;
+          default: return `relative p-4 md:p-5 border-4 border-solid border-primary-700 bg-primary-100 shadow-xl scale-105 cursor-pointer transition-all duration-300 transform ring-2 ring-primary-300`;
         }
       } else if (isLeading) {
         return `${baseClass} border-yellow-500 bg-yellow-50 shadow-md`;
@@ -458,13 +473,98 @@ export default function Origin() {
       return 'font-semibold text-base md:text-lg text-gray-900';
     };
 
+    // 獲取內聯樣式
+    const getInlineStyle = (): any => {
+      if (isSelected) {
+        switch (category) {
+          case 'outer': return {
+            border: '4px solid #8b6bff',
+            borderTop: '4px solid #8b6bff',
+            borderRight: '4px solid #8b6bff',
+            borderBottom: '4px solid #8b6bff',
+            borderLeft: '4px solid #8b6bff',
+            backgroundColor: '#f0ebff',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            transform: 'scale(1.05)',
+            outline: '2px solid #c7b8ff',
+            borderRadius: '12px', // 保持圓角
+            margin: '8px',
+            zIndex: 10,
+            boxSizing: 'border-box' as const, // 確保邊框包含在元素內
+            width: 'calc(100% - 16px)', // 確保有足夠空間顯示邊框
+            minHeight: 'auto' as const
+          };
+          case 'middle': return {
+            border: '4px solid #cc5e61',
+            borderTop: '4px solid #cc5e61',
+            borderRight: '4px solid #cc5e61',
+            borderBottom: '4px solid #cc5e61',
+            borderLeft: '4px solid #cc5e61',
+            backgroundColor: '#fce7e7',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            transform: 'scale(1.05)',
+            outline: '2px solid #f2b5b5',
+            borderRadius: '12px',
+            margin: '8px',
+            zIndex: 10,
+            boxSizing: 'border-box',
+            width: 'calc(100% - 16px)',
+            minHeight: 'auto'
+          };
+          case 'inner': return {
+            border: '4px solid #16a34a',
+            borderTop: '4px solid #16a34a',
+            borderRight: '4px solid #16a34a',
+            borderBottom: '4px solid #16a34a',
+            borderLeft: '4px solid #16a34a',
+            backgroundColor: '#dcfce7',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            transform: 'scale(1.05)',
+            outline: '2px solid #86efac',
+            borderRadius: '12px',
+            margin: '8px',
+            zIndex: 10,
+            boxSizing: 'border-box',
+            width: 'calc(100% - 16px)',
+            minHeight: 'auto'
+          };
+          default: return {
+            border: '4px solid #8b6bff',
+            borderTop: '4px solid #8b6bff',
+            borderRight: '4px solid #8b6bff',
+            borderBottom: '4px solid #8b6bff',
+            borderLeft: '4px solid #8b6bff',
+            backgroundColor: '#f0ebff',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            transform: 'scale(1.05)',
+            outline: '2px solid #c7b8ff',
+            borderRadius: '12px',
+            margin: '8px',
+            zIndex: 10,
+            boxSizing: 'border-box',
+            width: 'calc(100% - 16px)',
+            minHeight: 'auto'
+          };
+        }
+      }
+      return {};
+    };
+
     return (
       <div
         className={`${getCardClassName()} ${isAnimating ? 'animate-pulse' : ''}`}
+        style={getInlineStyle()}
         onClick={onSelect}
       >
         {/* 分類標籤 */}
-        <div className={getCategoryChipClass(category)}>
+        <div 
+          className={getCategoryChipClass(category)}
+          style={isSelected ? {
+            backgroundColor: category === 'outer' ? '#f0ebff' : category === 'middle' ? '#fce7e7' : '#dcfce7',
+            color: category === 'outer' ? '#7a59ff' : category === 'middle' ? '#b33335' : '#15803d',
+            borderColor: category === 'outer' ? '#e0d7ff' : category === 'middle' ? '#f8d1d1' : '#bbf7d0'
+          } : {}}
+        >
           {category === 'outer' ? '故事類型' : category === 'middle' ? '故事背景' : '故事主題'}
         </div>
         
@@ -477,7 +577,15 @@ export default function Origin() {
                 </svg>
               )}
             </div>
-            <span className={getTextClassName()}>{option.label}</span>
+            <span 
+              className={getTextClassName()}
+              style={isSelected ? {
+                color: category === 'outer' ? '#7a59ff' : category === 'middle' ? '#b33335' : '#15803d',
+                fontWeight: '600'
+              } : {}}
+            >
+              {option.label}
+            </span>
           </div>
           <div className="text-right">
             <div className={`text-base md:text-lg font-bold ${isLeading ? 'text-yellow-600' : 'text-gray-600'}`}>
@@ -513,13 +621,18 @@ export default function Origin() {
         </div>
         
         <div className="space-y-1">
-          <p className={`text-xs md:text-sm ${
-            isSelected 
-              ? `text-${color}-700` 
-              : isLeading 
-              ? 'text-yellow-700' 
-              : 'text-gray-600'
-          }`}>
+          <p 
+            className={`text-xs md:text-sm ${
+              isSelected 
+                ? `text-${color}-700` 
+                : isLeading 
+                ? 'text-yellow-700' 
+                : 'text-gray-600'
+            }`}
+            style={isSelected ? {
+              color: category === 'outer' ? '#7a59ff' : category === 'middle' ? '#b33335' : '#15803d'
+            } : {}}
+          >
             {/* 行動版顯示縮短描述，桌機版顯示完整描述 */}
             <span className="block md:hidden">
               {option.description.length > 15 
@@ -656,43 +769,45 @@ export default function Origin() {
         {currentStep === 1 && (
           <div className="bg-white rounded-lg shadow-md p-6">
           
-          <div className="space-y-6">
+          <div className="space-y-4 p-4">
             {/* 故事類型選項 */}
             <div className={`category-section ${expandedCategories.outer ? 'expanded' : 'collapsed'}`} style={{ backgroundColor: 'var(--category-primary-50)' }}>
               <div 
                 className="category-header"
                 onClick={() => setExpandedCategories(prev => ({ ...prev, outer: !prev.outer }))}
               >
-                <div className="flex items-center">
-                  <div className="category-title-card primary">
-                    🧙 故事類型
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
+                    <div className="category-title-card primary">
+                      🧙 故事類型
+                    </div>
+                    <div className="category-status">
+                      {selectedOptions.outer ? (
+                        <span className="completed">
+                          ✅ {getSelectedOptionLabel('outer')}
+                        </span>
+                      ) : (
+                        <span className="pending">
+                          ⏳ 待選擇
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="category-status">
-                    {selectedOptions.outer ? (
-                      <span className="completed">
-                        ✅ 已完成
-                      </span>
-                    ) : (
-                      <span className="pending">
-                        ⏳ 待選擇
-                      </span>
-                    )}
+                  <div className="text-gray-500">
+                    <svg 
+                      className={`w-6 h-6 chevron ${expandedCategories.outer ? 'rotated' : ''}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                </div>
-                <div className="text-gray-500">
-                  <svg 
-                    className={`w-6 h-6 chevron ${expandedCategories.outer ? 'rotated' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
                 </div>
               </div>
               
               {expandedCategories.outer && (
-                <div className="category-content space-y-3">
+                <div className="category-content space-y-4 p-2">
                   {options.outer.map((option) => {
                     const voteData = getCurrentVoteData('outer');
                     const votes = voteData[option.id as keyof typeof voteData] || 0;
@@ -720,36 +835,38 @@ export default function Origin() {
                 className="category-header"
                 onClick={() => setExpandedCategories(prev => ({ ...prev, middle: !prev.middle }))}
               >
-                <div className="flex items-center">
-                  <div className="category-title-card secondary">
-                    🏞 故事背景
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
+                    <div className="category-title-card secondary">
+                      🏞 故事背景
+                    </div>
+                    <div className="category-status">
+                      {selectedOptions.middle ? (
+                        <span className="completed">
+                          ✅ {getSelectedOptionLabel('middle')}
+                        </span>
+                      ) : (
+                        <span className="pending">
+                          ⏳ 待選擇
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="category-status">
-                    {selectedOptions.middle ? (
-                      <span className="completed">
-                        ✅ 已完成
-                      </span>
-                    ) : (
-                      <span className="pending">
-                        ⏳ 待選擇
-                      </span>
-                    )}
+                  <div className="text-gray-500">
+                    <svg 
+                      className={`w-6 h-6 chevron ${expandedCategories.middle ? 'rotated' : ''}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                </div>
-                <div className="text-gray-500">
-                  <svg 
-                    className={`w-6 h-6 chevron ${expandedCategories.middle ? 'rotated' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
                 </div>
               </div>
               
               {expandedCategories.middle && (
-                <div className="category-content space-y-3">
+                <div className="category-content space-y-4 p-2">
                   {options.middle.map((option) => {
                     const voteData = getCurrentVoteData('middle');
                     const votes = voteData[option.id as keyof typeof voteData] || 0;
@@ -777,36 +894,38 @@ export default function Origin() {
                 className="category-header"
                 onClick={() => setExpandedCategories(prev => ({ ...prev, inner: !prev.inner }))}
               >
-                <div className="flex items-center">
-                  <div className="category-title-card accent">
-                    💞 故事主題
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
+                    <div className="category-title-card accent">
+                      💞 故事主題
+                    </div>
+                    <div className="category-status">
+                      {selectedOptions.inner ? (
+                        <span className="completed">
+                          ✅ {getSelectedOptionLabel('inner')}
+                        </span>
+                      ) : (
+                        <span className="pending">
+                          ⏳ 待選擇
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="category-status">
-                    {selectedOptions.inner ? (
-                      <span className="completed">
-                        ✅ 已完成
-                      </span>
-                    ) : (
-                      <span className="pending">
-                        ⏳ 待選擇
-                      </span>
-                    )}
+                  <div className="text-gray-500">
+                    <svg 
+                      className={`w-6 h-6 chevron ${expandedCategories.inner ? 'rotated' : ''}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                </div>
-                <div className="text-gray-500">
-                  <svg 
-                    className={`w-6 h-6 chevron ${expandedCategories.inner ? 'rotated' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
                 </div>
               </div>
               
               {expandedCategories.inner && (
-                <div className="category-content space-y-3">
+                <div className="category-content space-y-4 p-2">
                   {options.inner.map((option) => {
                     const voteData = getCurrentVoteData('inner');
                     const votes = voteData[option.id as keyof typeof voteData] || 0;

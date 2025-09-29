@@ -81,6 +81,10 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/logo.svg" />
         <link rel="manifest" href="/manifest.json" />
+        {/* 強制清除快取 - 解決手機版顏色快取問題 */}
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
       </head>
       <body className={inter.className}>
         {/* 移動端導航 */}
