@@ -2,6 +2,9 @@
  * 工具函式集合
  */
 
+// 匯出 cn 函數
+export { cn } from './cn';
+
 /**
  * 格式化日期
  * @param date 日期物件或字串

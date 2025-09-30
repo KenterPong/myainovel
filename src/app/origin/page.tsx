@@ -42,6 +42,10 @@ export default function Origin() {
     middle: false,
     inner: false
   });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedStory, setGeneratedStory] = useState<any>(null);
+  const [showStoryResult, setShowStoryResult] = useState(false);
+  const [showStoryError, setShowStoryError] = useState(false);
 
   // 獲取選中選項的標籤
   const getSelectedOptionLabel = (category: string) => {
@@ -183,7 +187,7 @@ export default function Origin() {
       .slice(0, 3);
   };
 
-  const handleVote = () => {
+  const handleVote = async () => {
     // 檢查是否有遺漏的選擇
     const missing = [];
     if (!selectedOptions.outer) missing.push('故事類型');
@@ -249,10 +253,6 @@ export default function Origin() {
       // 清空選擇
       setSelectedOptions({ outer: '', middle: '', inner: '' });
       
-      // 顯示投票完成提醒
-      setShowVoteSuccess(true);
-      setTimeout(() => setShowVoteSuccess(false), 3000);
-      
       // 顯示排名內容取代投票按鈕
       setTimeout(() => {
         setShowRankingContent(true);
@@ -295,15 +295,61 @@ export default function Origin() {
           inner: options.inner.find(opt => opt.id === innerHighest[0])?.label || ''
         };
         
-        console.log('觸發AI提示詞生成，選中組合:', selectedLabels);
+        console.log('觸發AI故事生成，選中組合:', selectedLabels);
         setSelectedResults(selectedLabels);
-        setCurrentStep(2);
+        
+        // 不顯示投票完成彈窗，直接觸發 AI 故事生成
+        setShowVoteSuccess(false);
+        await generateStoryWithAI(selectedLabels);
       } else {
         console.log('三大類別未全部達到100票，繼續投票');
+        // 顯示投票完成彈窗
+        setShowVoteSuccess(true);
+        setTimeout(() => setShowVoteSuccess(false), 3000);
       }
     }
   };
 
+
+  // AI 故事生成函數
+  const generateStoryWithAI = async (selectedLabels: { outer: string; middle: string; inner: string }) => {
+    setIsGenerating(true);
+    
+    try {
+      const response = await fetch('/api/stories/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          genre: selectedLabels.outer,
+          background: selectedLabels.middle,
+          theme: selectedLabels.inner
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('故事生成失敗');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setGeneratedStory(result.storyData);
+        setShowStoryResult(true);
+        setCurrentStep(2);
+      } else {
+        throw new Error(result.error || '故事生成失敗');
+      }
+    } catch (error) {
+      console.error('AI 故事生成錯誤:', error);
+      // 顯示統一的錯誤彈窗
+      setShowStoryError(true);
+      setTimeout(() => setShowStoryError(false), 5000);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const generatePrompt = () => {
     return `請根據以下設定創作一個故事起源：
@@ -751,6 +797,53 @@ export default function Origin() {
           </div>
         )}
 
+        {/* 故事生成錯誤提醒 */}
+        {showStoryError && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">故事生成失敗</h3>
+              <p className="text-gray-600 mb-6">很抱歉，故事生成過程中發生錯誤，請稍後再試</p>
+              
+              <div className="space-y-4">
+                <div className="text-sm text-gray-600 space-y-2">
+                  <p>🔧 請檢查網路連線是否正常</p>
+                  <p>⏰ 稍後可以重新嘗試投票</p>
+                </div>
+                
+                <div className="flex space-x-3 justify-center">
+                  <button
+                    onClick={() => {
+                      setShowStoryError(false);
+                      setCurrentStep(1);
+                      setSelectedOptions({ outer: '', middle: '', inner: '' });
+                      setSelectedResults({ outer: '', middle: '', inner: '' });
+                      setVoteCounts({ outer: {}, middle: {}, inner: {} });
+                      setShowRankingContent(false);
+                      setExpandedCategories({ outer: true, middle: false, inner: false });
+                      setGeneratedStory(null);
+                      setShowStoryResult(false);
+                    }}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+                  >
+                    重新投票
+                  </button>
+                  <button
+                    onClick={() => setShowStoryError(false)}
+                    className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                  >
+                    關閉
+                  </button>
+                </div>
+                
+                <p className="text-xs text-gray-500">
+                  如果問題持續發生，請聯繫技術支援
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 步驟1：投票選擇 */}
         {currentStep === 1 && (
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -1021,44 +1114,153 @@ export default function Origin() {
         </div>
       )}
 
-      {/* 步驟2：AI故事生成提示詞 */}
+      {/* 步驟2：AI故事生成結果 */}
       {currentStep === 2 && (
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">AI故事生成提示詞</h2>
-          
-          <div className="bg-gray-50 rounded-lg p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">生成的故事提示詞：</h3>
-            <div className="bg-white border rounded-lg p-4">
-              <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
-                {generatePrompt()}
-              </pre>
+          {isGenerating ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">AI 正在創作故事...</h2>
+              <p className="text-gray-600">請稍候，這可能需要幾分鐘時間</p>
             </div>
-          </div>
+          ) : showStoryResult && generatedStory ? (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">🎉 故事生成完成！</h2>
+              
+              <div className="space-y-6">
+                {/* 故事標題 */}
+                <div className="bg-blue-50 p-6 rounded-lg">
+                  <h3 className="text-2xl font-bold text-blue-800 mb-4">📖 故事標題</h3>
+                  <p className="text-xl text-blue-700">{generatedStory.title}</p>
+                </div>
+                
+                {/* 故事類型與世界觀 */}
+                <div className="bg-green-50 p-6 rounded-lg">
+                  <h3 className="text-2xl font-bold text-green-800 mb-4">🎭 故事類型與世界觀</h3>
+                  <p className="text-lg text-green-700 mb-2"><strong>類型：</strong>{generatedStory.genre}</p>
+                  <p className="text-lg text-green-700"><strong>世界觀：</strong>{generatedStory.worldview}</p>
+                </div>
+                
+                {/* 主要角色 */}
+                <div className="bg-purple-50 p-6 rounded-lg">
+                  <h3 className="text-2xl font-bold text-purple-800 mb-4">👥 主要角色</h3>
+                  {generatedStory.characters?.map((character: any, index: number) => (
+                    <div key={index} className="mb-4 p-4 bg-white rounded border-l-4 border-purple-400">
+                      <h4 className="text-lg font-bold text-purple-700">{character.name}</h4>
+                      <p className="text-gray-700"><strong>年齡：</strong>{character.age}</p>
+                      <p className="text-gray-700"><strong>角色定位：</strong>{character.role}</p>
+                      <p className="text-gray-700"><strong>性格特點：</strong>{character.personality}</p>
+                      <p className="text-gray-700"><strong>背景故事：</strong>{character.background}</p>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* 核心衝突與主題 */}
+                <div className="bg-red-50 p-6 rounded-lg">
+                  <h3 className="text-2xl font-bold text-red-800 mb-4">⚔️ 核心衝突與主題</h3>
+                  <p className="text-lg text-red-700 mb-2"><strong>核心衝突：</strong>{generatedStory.conflict}</p>
+                  <p className="text-lg text-red-700"><strong>故事主題：</strong>{generatedStory.theme}</p>
+                </div>
+                
+                {/* 故事背景環境 */}
+                <div className="bg-yellow-50 p-6 rounded-lg">
+                  <h3 className="text-2xl font-bold text-yellow-800 mb-4">🌍 故事背景環境</h3>
+                  <p className="text-lg text-yellow-700">{generatedStory.setting}</p>
+                </div>
+                
+                {/* 故事發展大綱 */}
+                <div className="bg-indigo-50 p-6 rounded-lg">
+                  <h3 className="text-2xl font-bold text-indigo-800 mb-4">📋 故事發展大綱</h3>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-white rounded">
+                      <h4 className="text-lg font-bold text-indigo-700 mb-2">開頭設定</h4>
+                      <p className="text-gray-700">{generatedStory.outline?.beginning}</p>
+                    </div>
+                    <div className="p-4 bg-white rounded">
+                      <h4 className="text-lg font-bold text-indigo-700 mb-2">發展過程</h4>
+                      <p className="text-gray-700">{generatedStory.outline?.development}</p>
+                    </div>
+                    <div className="p-4 bg-white rounded">
+                      <h4 className="text-lg font-bold text-indigo-700 mb-2">高潮情節</h4>
+                      <p className="text-gray-700">{generatedStory.outline?.climax}</p>
+                    </div>
+                    <div className="p-4 bg-white rounded">
+                      <h4 className="text-lg font-bold text-indigo-700 mb-2">結局安排</h4>
+                      <p className="text-gray-700">{generatedStory.outline?.ending}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 text-center">
+                <p className="text-gray-600 mb-4">故事已成功生成並儲存到資料庫！</p>
+                <div className="flex justify-center space-x-4">
+                  <button
+                    onClick={() => {
+                      setCurrentStep(1);
+                      setSelectedOptions({ outer: '', middle: '', inner: '' });
+                      setSelectedResults({ outer: '', middle: '', inner: '' });
+                      setVoteCounts({ outer: {}, middle: {}, inner: {} });
+                      setShowRankingContent(false);
+                      setExpandedCategories({ outer: true, middle: false, inner: false });
+                      setGeneratedStory(null);
+                      setShowStoryResult(false);
+                    }}
+                    className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    重新開始
+                  </button>
+                  <button
+                    onClick={() => {
+                      // 這裡可以加入跳轉到故事詳情頁面的邏輯
+                      alert('跳轉到故事詳情頁面功能開發中...');
+                    }}
+                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    查看故事詳情
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">AI故事生成提示詞</h2>
+              
+              <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">生成的故事提示詞：</h3>
+                <div className="bg-white border rounded-lg p-4">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
+                    {generatePrompt()}
+                  </pre>
+                </div>
+              </div>
 
-          <div className="flex justify-center space-x-4">
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(generatePrompt());
-                alert('提示詞已複製到剪貼簿！');
-              }}
-              className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              複製提示詞
-            </button>
-            <button
-              onClick={() => {
-                setCurrentStep(1);
-                setSelectedOptions({ outer: '', middle: '', inner: '' });
-                setSelectedResults({ outer: '', middle: '', inner: '' });
-                setVoteCounts({ outer: {}, middle: {}, inner: {} });
-                setShowRankingContent(false);
-                setExpandedCategories({ outer: true, middle: false, inner: false });
-              }}
-              className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              重新開始
-              </button>
-          </div>
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatePrompt());
+                    alert('提示詞已複製到剪貼簿！');
+                  }}
+                  className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  複製提示詞
+                </button>
+                <button
+                  onClick={() => {
+                    setCurrentStep(1);
+                    setSelectedOptions({ outer: '', middle: '', inner: '' });
+                    setSelectedResults({ outer: '', middle: '', inner: '' });
+                    setVoteCounts({ outer: {}, middle: {}, inner: {} });
+                    setShowRankingContent(false);
+                    setExpandedCategories({ outer: true, middle: false, inner: false });
+                  }}
+                  className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  重新開始
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       </div>
