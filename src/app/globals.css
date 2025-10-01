@@ -224,6 +224,38 @@ h3 {
   }
 }
 
+/* 選中狀態卡片樣式 */
+.option-card-selected {
+  position: relative;
+  padding: 1rem 1.25rem;
+  border: 4px solid;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  transform: scale(1.05);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.option-card-selected.primary {
+  border-color: var(--primary-700);
+  background-color: var(--primary-100);
+  outline: 2px solid var(--primary-300);
+}
+
+.option-card-selected.secondary {
+  border-color: var(--secondary-700);
+  background-color: var(--secondary-100);
+  outline: 2px solid var(--secondary-300);
+}
+
+.option-card-selected.accent {
+  border-color: var(--accent-700);
+  background-color: var(--accent-100);
+  outline: 2px solid var(--accent-300);
+}
+
 /* 手機版特定樣式 - 確保顏色一致性和邊框顯示 */
 @media (max-width: 768px) {
   /* 強制清除手機版快取 */
@@ -235,35 +267,14 @@ h3 {
   }
   
   /* 確保選中狀態在手機版上正確顯示 */
-  .relative.p-4.border-4.border-solid {
-    border-width: 4px !important;
-    border-style: solid !important;
-    border-top: 4px solid !important;
-    border-right: 4px solid !important;
-    border-bottom: 4px solid !important;
-    border-left: 4px solid !important;
-    border-radius: 12px !important;
-    box-sizing: border-box !important;
-    width: calc(100% - 16px) !important;
-    margin: 8px !important;
-  }
-  
-  /* 手機版選中卡片強制樣式 - 只修復邊框，背景保持原樣 */
-  .relative.p-4.border-4.border-solid.border-primary-700 {
-    border-color: var(--primary-700) !important;
-  }
-  
-  .relative.p-4.border-4.border-solid.border-secondary-700 {
-    border-color: var(--secondary-700) !important;
-  }
-  
-  .relative.p-4.border-4.border-solid.border-accent-700 {
-    border-color: var(--accent-700) !important;
+  .option-card-selected {
+    margin: 0.5rem;
+    width: calc(100% - 1rem);
   }
   
   /* 確保容器有足夠空間 */
   .category-content {
-    padding: 8px !important;
+    padding: 0.5rem !important;
     overflow: visible !important;
   }
   

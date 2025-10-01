@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePageSwipe, useStepSwipe, useCardSwipe } from '@/types/useSwipe';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Origin() {
   const router = useRouter();
@@ -46,6 +47,13 @@ export default function Origin() {
   const [generatedStory, setGeneratedStory] = useState<any>(null);
   const [showStoryResult, setShowStoryResult] = useState(false);
   const [showStoryError, setShowStoryError] = useState(false);
+  const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
+  const [votingInfo, setVotingInfo] = useState<any>(null);
+  const [voterSession, setVoterSession] = useState<string>('');
+  const [isVoting, setIsVoting] = useState(false);
+  const votingInProgress = useRef(false);
+  const lastVoteTime = useRef(0);
+  const isGeneratingStory = useRef(false);
 
   // 獲取選中選項的標籤
   const getSelectedOptionLabel = (category: string) => {
@@ -86,33 +94,70 @@ export default function Origin() {
     ]
   };
 
-  // 假資料 - 模擬投票結果
-  const mockVoteData = {
-    outer: {
-      'fantasy': 99,
-      'sci-fi': 78,
-      'mystery': 99,
-      'history': 65,
-      'urban': 88,
-      'apocalypse': 72
-    },
-    middle: {
-      'campus': 89,
-      'workplace': 76,
-      'ancient': 98,
-      'adventure': 105,
-      'superpower': 82,
-      'deduction': 91
-    },
-    inner: {
-      'bg': 92,
-      'bl': 85,
-      'gl': 79,
-      'family': 88,
-      'friendship': 96,
-      'master-disciple': 103
+  // 初始化投票者會話 ID
+  useEffect(() => {
+    if (!voterSession) {
+      setVoterSession(uuidv4());
+    }
+  }, [voterSession]);
+
+  // 獲取投票統計
+  const fetchVotingStats = async (storyId: string) => {
+    try {
+      const response = await fetch(`/api/origin/vote?storyId=${storyId}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setVotingInfo(result.data);
+        setVoteCounts(result.data.voteCounts);
+        
+        // 檢查是否所有門檻都已達到，且沒有正在生成故事
+        if (result.data.allThresholdsReached && !isGeneratingStory.current) {
+          console.log('門檻已達到，觸發 AI 故事生成');
+          await generateStoryWithAI(result.data.voteCounts);
+        }
+      }
+    } catch (error) {
+      console.error('獲取投票統計錯誤:', error);
     }
   };
+
+  // 初始化或獲取當前故事
+  useEffect(() => {
+    const initializeStory = async () => {
+      try {
+        // 嘗試獲取現有的投票中故事
+        const response = await fetch('/api/stories?status=投票中');
+        const result = await response.json();
+        
+        if (result.success && result.data.length > 0) {
+          const story = result.data[0];
+          setCurrentStoryId(story.story_id);
+          await fetchVotingStats(story.story_id);
+        } else {
+          // 建立新故事
+          const newStoryResponse = await fetch('/api/stories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              title: '故事起源投票',
+              voting_result: null 
+            })
+          });
+          
+          const newStoryResult = await newStoryResponse.json();
+          if (newStoryResult.success) {
+            setCurrentStoryId(newStoryResult.data.story_id);
+            await fetchVotingStats(newStoryResult.data.story_id);
+          }
+        }
+      } catch (error) {
+        console.error('初始化故事錯誤:', error);
+      }
+    };
+
+    initializeStory();
+  }, []);
 
   const handleOptionSelect = (category: string, optionId: string) => {
     setSelectedOptions(prev => ({
@@ -188,6 +233,23 @@ export default function Origin() {
   };
 
   const handleVote = async () => {
+    const now = Date.now();
+    console.log('handleVote 被調用，當前 isVoting 狀態:', isVoting, 'votingInProgress.current:', votingInProgress.current, '時間差:', now - lastVoteTime.current);
+    
+    // 防止重複提交 - 使用 useRef 提供更強力的防護
+    if (isVoting || votingInProgress.current) {
+      console.log('投票進行中，請勿重複提交');
+      return;
+    }
+    
+    // 防止快速點擊（1秒內只能點擊一次）
+    if (now - lastVoteTime.current < 1000) {
+      console.log('點擊過於頻繁，請稍後再試');
+      return;
+    }
+    
+    lastVoteTime.current = now;
+
     // 檢查是否有遺漏的選擇
     const missing = [];
     if (!selectedOptions.outer) missing.push('故事類型');
@@ -201,119 +263,144 @@ export default function Origin() {
       return;
     }
 
-    if (selectedOptions.outer && selectedOptions.middle && selectedOptions.inner) {
-      // 模擬投票
-      const newVoteCounts = {
-        outer: { ...voteCounts.outer },
-        middle: { ...voteCounts.middle },
-        inner: { ...voteCounts.inner }
-      };
-      newVoteCounts.outer[selectedOptions.outer] = (newVoteCounts.outer[selectedOptions.outer] || 0) + 1;
-      newVoteCounts.middle[selectedOptions.middle] = (newVoteCounts.middle[selectedOptions.middle] || 0) + 1;
-      newVoteCounts.inner[selectedOptions.inner] = (newVoteCounts.inner[selectedOptions.inner] || 0) + 1;
-      
-      // 觸發動畫效果
-      const voteKeys = [
-        `outer-${selectedOptions.outer}`,
-        `middle-${selectedOptions.middle}`,
-        `inner-${selectedOptions.inner}`
-      ];
-      
-      setAnimatingVotes(prev => {
-        const newAnimating = { ...prev };
-        voteKeys.forEach(key => {
-          newAnimating[key] = true;
-        });
-        return newAnimating;
+    if (!currentStoryId || !voterSession) {
+      console.error('缺少故事 ID 或投票者會話');
+      return;
+    }
+
+    // 設置投票狀態
+    console.log('設置投票狀態為 true');
+    setIsVoting(true);
+    votingInProgress.current = true;
+
+    try {
+      // 提交投票到 API
+      const response = await fetch('/api/origin/vote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storyId: currentStoryId,
+          outerChoice: selectedOptions.outer,
+          middleChoice: selectedOptions.middle,
+          innerChoice: selectedOptions.inner,
+          voterSession: voterSession
+        })
       });
-      
-      // 票數動畫效果
-      voteKeys.forEach((key, index) => {
-        setTimeout(() => {
-          setVoteAnimation(prev => ({
-            ...prev,
-            [key]: prev[key] ? prev[key] + 1 : 1
-          }));
-        }, index * 200);
-      });
-      
-      // 清除動畫狀態
-      setTimeout(() => {
+
+      const result = await response.json();
+
+      if (result.success) {
+        // 觸發動畫效果
+        const voteKeys = [
+          `outer-${selectedOptions.outer}`,
+          `middle-${selectedOptions.middle}`,
+          `inner-${selectedOptions.inner}`
+        ];
+        
         setAnimatingVotes(prev => {
           const newAnimating = { ...prev };
           voteKeys.forEach(key => {
-            newAnimating[key] = false;
+            newAnimating[key] = true;
           });
           return newAnimating;
         });
-      }, 1000);
-      
-      setVoteCounts(newVoteCounts);
-      
-      // 清空選擇
-      setSelectedOptions({ outer: '', middle: '', inner: '' });
-      
-      // 顯示排名內容取代投票按鈕
-      setTimeout(() => {
-        setShowRankingContent(true);
-      }, 1000);
-      
-      // 計算包含用戶投票後的總票數
-      const calculateTotalVotes = (category: 'outer' | 'middle' | 'inner') => {
-        const mockData = mockVoteData[category];
-        const actualVotes = newVoteCounts[category];
         
-        const result: Record<string, number> = { ...mockData };
-        Object.keys(actualVotes).forEach(key => {
-          result[key] = (result[key] || 0) + actualVotes[key];
+        // 票數動畫效果
+        voteKeys.forEach((key, index) => {
+          setTimeout(() => {
+            setVoteAnimation(prev => ({
+              ...prev,
+              [key]: prev[key] ? prev[key] + 1 : 1
+            }));
+          }, index * 200);
         });
         
-        return result;
-      };
-      
-      // 獲取三大類別中票數最高的選項（包含用戶投票）
-      const outerVotes = calculateTotalVotes('outer');
-      const middleVotes = calculateTotalVotes('middle');
-      const innerVotes = calculateTotalVotes('inner');
-      
-      const outerHighest = Object.entries(outerVotes).reduce((a, b) => a[1] > b[1] ? a : b);
-      const middleHighest = Object.entries(middleVotes).reduce((a, b) => a[1] > b[1] ? a : b);
-      const innerHighest = Object.entries(innerVotes).reduce((a, b) => a[1] > b[1] ? a : b);
-      
-      console.log('三大類別最高票選項（包含用戶投票）:', {
-        outer: { optionId: outerHighest[0], votes: outerHighest[1] },
-        middle: { optionId: middleHighest[0], votes: middleHighest[1] },
-        inner: { optionId: innerHighest[0], votes: innerHighest[1] }
-      });
-      
-      // 檢查三大類別是否都有選項達到100票
-      if (outerHighest[1] >= 100 && middleHighest[1] >= 100 && innerHighest[1] >= 100) {
-        // 獲取最高票選項的標籤
-        const selectedLabels = {
-          outer: options.outer.find(opt => opt.id === outerHighest[0])?.label || '',
-          middle: options.middle.find(opt => opt.id === middleHighest[0])?.label || '',
-          inner: options.inner.find(opt => opt.id === innerHighest[0])?.label || ''
-        };
+        // 清除動畫狀態
+        setTimeout(() => {
+          setAnimatingVotes(prev => {
+            const newAnimating = { ...prev };
+            voteKeys.forEach(key => {
+              newAnimating[key] = false;
+            });
+            return newAnimating;
+          });
+        }, 1000);
+
+        // 更新投票統計
+        setVoteCounts(result.data.voteCounts);
         
-        console.log('觸發AI故事生成，選中組合:', selectedLabels);
-        setSelectedResults(selectedLabels);
+        // 清空選擇
+        setSelectedOptions({ outer: '', middle: '', inner: '' });
         
-        // 不顯示投票完成彈窗，直接觸發 AI 故事生成
-        setShowVoteSuccess(false);
-        await generateStoryWithAI(selectedLabels);
+        // 顯示排名內容取代投票按鈕
+        setTimeout(() => {
+          setShowRankingContent(true);
+        }, 1000);
+
+        // 重置投票狀態（在投票成功後立即重置）
+        console.log('投票成功，重置投票狀態為 false');
+        setIsVoting(false);
+        votingInProgress.current = false;
+        
+        // 檢查是否所有門檻都已達到
+        if (result.data.allThresholdsReached) {
+          // 獲取最高票選項的標籤
+          const outerHighest = Object.entries(result.data.voteCounts.outer).reduce((a, b) => (a[1] as number) > (b[1] as number) ? a : b) as [string, number];
+          const middleHighest = Object.entries(result.data.voteCounts.middle).reduce((a, b) => (a[1] as number) > (b[1] as number) ? a : b) as [string, number];
+          const innerHighest = Object.entries(result.data.voteCounts.inner).reduce((a, b) => (a[1] as number) > (b[1] as number) ? a : b) as [string, number];
+          
+          const selectedLabels = {
+            outer: options.outer.find(opt => opt.id === outerHighest[0])?.label || '',
+            middle: options.middle.find(opt => opt.id === middleHighest[0])?.label || '',
+            inner: options.inner.find(opt => opt.id === innerHighest[0])?.label || ''
+          };
+          
+          console.log('觸發AI故事生成，選中組合:', selectedLabels);
+          setSelectedResults(selectedLabels);
+          
+          // 不顯示投票完成彈窗，直接觸發 AI 故事生成
+          setShowVoteSuccess(false);
+          await generateStoryWithAI(selectedLabels);
+        } else {
+          console.log('三大類別未全部達到門檻，繼續投票');
+          // 顯示投票完成彈窗
+          setShowVoteSuccess(true);
+          setTimeout(() => setShowVoteSuccess(false), 3000);
+        }
       } else {
-        console.log('三大類別未全部達到100票，繼續投票');
-        // 顯示投票完成彈窗
-        setShowVoteSuccess(true);
-        setTimeout(() => setShowVoteSuccess(false), 3000);
+        // 處理投票失敗
+        if (response.status === 429) {
+          setShowValidationError(true);
+          setMissingSelections([result.message]);
+          setTimeout(() => setShowValidationError(false), 5000);
+        } else {
+          console.error('投票失敗:', result.message);
+          alert('投票失敗：' + result.message);
+        }
       }
+    } catch (error) {
+      console.error('投票提交錯誤:', error);
+      alert('投票提交失敗，請稍後再試');
+    } finally {
+      // 重置投票狀態
+      console.log('finally 區塊：重置投票狀態為 false');
+      setIsVoting(false);
+      votingInProgress.current = false;
     }
   };
 
 
   // AI 故事生成函數
   const generateStoryWithAI = async (selectedLabels: { outer: string; middle: string; inner: string }) => {
+    // 設置生成標記，防止重複觸發
+    isGeneratingStory.current = true;
     setIsGenerating(true);
+    
+    // 立即清空投票統計，防止重複觸發
+    console.log('開始 AI 故事生成，清空投票統計');
+    setVoteCounts({ outer: {}, middle: {}, inner: {} });
     
     try {
       const response = await fetch('/api/stories/generate', {
@@ -335,9 +422,23 @@ export default function Origin() {
       const result = await response.json();
       
       if (result.success) {
-        setGeneratedStory(result.storyData);
-        setShowStoryResult(true);
-        setCurrentStep(2);
+        // 故事生成成功，不顯示結果，直接重新開始投票
+        console.log('故事生成成功，開始新一輪投票');
+        
+        // 重新獲取投票統計（此時應該已經清空）
+        if (currentStoryId) {
+          await fetchVotingStats(currentStoryId);
+        }
+        
+        // 重置狀態
+        setSelectedOptions({ outer: '', middle: '', inner: '' });
+        setSelectedResults({ outer: '', middle: '', inner: '' });
+        setShowRankingContent(false);
+        setExpandedCategories({ outer: true, middle: false, inner: false });
+        
+        // 顯示成功訊息
+        setShowVoteSuccess(true);
+        setTimeout(() => setShowVoteSuccess(false), 3000);
       } else {
         throw new Error(result.error || '故事生成失敗');
       }
@@ -348,6 +449,7 @@ export default function Origin() {
       setTimeout(() => setShowStoryError(false), 5000);
     } finally {
       setIsGenerating(false);
+      isGeneratingStory.current = false;
     }
   };
 
@@ -367,21 +469,13 @@ export default function Origin() {
 字數約300-500字，使用繁體中文。`;
   };
 
-  // 獲取當前投票數據（結合假資料和實際投票）
+  // 獲取當前投票數據（使用真實的投票統計）
   const getCurrentVoteData = (category: 'outer' | 'middle' | 'inner') => {
-    const mockData = mockVoteData[category];
-    const actualVotes = voteCounts[category];
-    
-    const result: Record<string, number> = { ...mockData };
-    Object.keys(actualVotes).forEach(key => {
-      result[key] = (result[key] || 0) + actualVotes[key];
-    });
-    
-    return result;
+    return voteCounts[category] || {};
   };
 
   // 進度條組件
-  const ProgressBar = ({ current, target = 100, className = "", isLeading = false, category = "outer" }: { current: number; target?: number; className?: string; isLeading?: boolean; category?: string }) => {
+  const ProgressBar = ({ current, target, className = "", isLeading = false, category = "outer" }: { current: number; target: number; className?: string; isLeading?: boolean; category?: string }) => {
     const percentage = Math.min((current / target) * 100, 100);
     const isComplete = current >= target;
     
@@ -432,7 +526,8 @@ export default function Origin() {
     );
     const voteKey = `${category}-${option.id}`;
     const isAnimating = animatingVotes[voteKey];
-    const progress = Math.min((votes / 100) * 100, 100);
+    const threshold = parseInt(process.env.NEXT_PUBLIC_VOTING_THRESHOLD || '100');
+    const progress = Math.min((votes / threshold) * 100, 100);
     
     const getCategoryColor = (cat: string) => {
       switch (cat) {
@@ -459,10 +554,10 @@ export default function Origin() {
       
       if (isSelected) {
         switch (category) {
-          case 'outer': return `relative p-4 md:p-5 border-4 border-solid border-primary-700 bg-primary-100 shadow-xl scale-105 cursor-pointer transition-all duration-300 transform ring-2 ring-primary-300`;
-          case 'middle': return `relative p-4 md:p-5 border-4 border-solid border-secondary-700 bg-secondary-100 shadow-xl scale-105 cursor-pointer transition-all duration-300 transform ring-2 ring-secondary-300`;
-          case 'inner': return `relative p-4 md:p-5 border-4 border-solid border-accent-700 bg-accent-100 shadow-xl scale-105 cursor-pointer transition-all duration-300 transform ring-2 ring-accent-300`;
-          default: return `relative p-4 md:p-5 border-4 border-solid border-primary-700 bg-primary-100 shadow-xl scale-105 cursor-pointer transition-all duration-300 transform ring-2 ring-primary-300`;
+          case 'outer': return `option-card-selected primary`;
+          case 'middle': return `option-card-selected secondary`;
+          case 'inner': return `option-card-selected accent`;
+          default: return `option-card-selected primary`;
         }
       } else if (isLeading) {
         return `${baseClass} border-yellow-500 bg-yellow-50 shadow-md`;
@@ -502,101 +597,18 @@ export default function Origin() {
       return 'font-semibold text-base md:text-lg text-gray-900';
     };
 
-    // 獲取內聯樣式
-    const getInlineStyle = (): any => {
-      if (isSelected) {
-        switch (category) {
-          case 'outer': return {
-            border: '4px solid #8b6bff',
-            borderTop: '4px solid #8b6bff',
-            borderRight: '4px solid #8b6bff',
-            borderBottom: '4px solid #8b6bff',
-            borderLeft: '4px solid #8b6bff',
-            backgroundColor: '#f0ebff',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            transform: 'scale(1.05)',
-            outline: '2px solid #c7b8ff',
-            borderRadius: '12px', // 保持圓角
-            margin: '8px',
-            zIndex: 10,
-            boxSizing: 'border-box' as const, // 確保邊框包含在元素內
-            width: 'calc(100% - 16px)', // 確保有足夠空間顯示邊框
-            minHeight: 'auto' as const
-          };
-          case 'middle': return {
-            border: '4px solid #cc5e61',
-            borderTop: '4px solid #cc5e61',
-            borderRight: '4px solid #cc5e61',
-            borderBottom: '4px solid #cc5e61',
-            borderLeft: '4px solid #cc5e61',
-            backgroundColor: '#fce7e7',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            transform: 'scale(1.05)',
-            outline: '2px solid #f2b5b5',
-            borderRadius: '12px',
-            margin: '8px',
-            zIndex: 10,
-            boxSizing: 'border-box',
-            width: 'calc(100% - 16px)',
-            minHeight: 'auto'
-          };
-          case 'inner': return {
-            border: '4px solid #16a34a',
-            borderTop: '4px solid #16a34a',
-            borderRight: '4px solid #16a34a',
-            borderBottom: '4px solid #16a34a',
-            borderLeft: '4px solid #16a34a',
-            backgroundColor: '#dcfce7',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            transform: 'scale(1.05)',
-            outline: '2px solid #86efac',
-            borderRadius: '12px',
-            margin: '8px',
-            zIndex: 10,
-            boxSizing: 'border-box',
-            width: 'calc(100% - 16px)',
-            minHeight: 'auto'
-          };
-          default: return {
-            border: '4px solid #8b6bff',
-            borderTop: '4px solid #8b6bff',
-            borderRight: '4px solid #8b6bff',
-            borderBottom: '4px solid #8b6bff',
-            borderLeft: '4px solid #8b6bff',
-            backgroundColor: '#f0ebff',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            transform: 'scale(1.05)',
-            outline: '2px solid #c7b8ff',
-            borderRadius: '12px',
-            margin: '8px',
-            zIndex: 10,
-            boxSizing: 'border-box',
-            width: 'calc(100% - 16px)',
-            minHeight: 'auto'
-          };
-        }
-      }
-      return {};
-    };
+    // 移除內聯樣式，改用純 CSS 類別
 
     return (
       <div
         className={`${getCardClassName()} ${isAnimating ? 'animate-pulse' : ''}`}
-        style={getInlineStyle()}
         onTouchStart={cardSwipe.touchStart}
         onTouchMove={cardSwipe.touchMove}
         onTouchEnd={cardSwipe.touchEnd}
         onClick={onSelect}
       >
         {/* 分類標籤 */}
-        <div 
-          className={getCategoryChipClass(category)}
-          style={isSelected ? {
-            backgroundColor: category === 'outer' ? '#f0ebff' : category === 'middle' ? '#fce7e7' : '#dcfce7',
-            color: category === 'outer' ? '#7a59ff' : category === 'middle' ? '#b33335' : '#15803d',
-            borderColor: category === 'outer' ? '#e0d7ff' : category === 'middle' ? '#f8d1d1' : '#bbf7d0'
-          } : {}}
-        >
+        <div className={getCategoryChipClass(category)}>
           {category === 'outer' ? '故事類型' : category === 'middle' ? '故事背景' : '故事主題'}
         </div>
         
@@ -609,13 +621,7 @@ export default function Origin() {
                 </svg>
               )}
             </div>
-            <span 
-              className={getTextClassName()}
-              style={isSelected ? {
-                color: category === 'outer' ? '#7a59ff' : category === 'middle' ? '#b33335' : '#15803d',
-                fontWeight: '600'
-              } : {}}
-            >
+            <span className={getTextClassName()}>
               {option.label}
             </span>
           </div>
@@ -636,16 +642,16 @@ export default function Origin() {
             <span>進度</span>
             <div className="flex items-center space-x-2">
               <span>{Math.round(progress)}%</span>
-              {!isLeading && votes < 100 && (
+              {!isLeading && votes < parseInt(process.env.NEXT_PUBLIC_VOTING_THRESHOLD || '100') && (
                 <span className="text-xs text-gray-500">
-                  還差 {100 - votes} 票
+                  還差 {parseInt(process.env.NEXT_PUBLIC_VOTING_THRESHOLD || '100') - votes} 票
                 </span>
               )}
             </div>
           </div>
           <ProgressBar 
             current={votes} 
-            target={100} 
+            target={parseInt(process.env.NEXT_PUBLIC_VOTING_THRESHOLD || '100')} 
             className="h-2"
             isLeading={isLeading}
             category={category}
@@ -661,9 +667,6 @@ export default function Origin() {
                 ? 'text-yellow-700' 
                 : 'text-gray-600'
             }`}
-            style={isSelected ? {
-              color: category === 'outer' ? '#7a59ff' : category === 'middle' ? '#b33335' : '#15803d'
-            } : {}}
           >
             {/* 行動版顯示縮短描述，桌機版顯示完整描述 */}
             <span className="block md:hidden">
@@ -755,43 +758,58 @@ export default function Origin() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
               <div className="text-6xl mb-4">🎉</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">投票完成！</h3>
-              <p className="text-gray-600 mb-4">感謝您的參與，系統正在統計結果...</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {isGenerating ? '故事生成中...' : '投票完成！'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {isGenerating 
+                  ? 'AI 正在根據投票結果創作故事，請稍候...' 
+                  : '感謝您的參與，系統正在統計結果...'
+                }
+              </p>
               
               <div className="space-y-4">
-                <div className="flex justify-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
-                </div>
-                
-                <div className="text-sm text-gray-600 space-y-2">
-                  <p>📅 3 天後公布結果，屆時會通知你</p>
-                  <p>🔗 你也可以分享連結邀請朋友一起投票</p>
-                </div>
-                
-                <div className="flex space-x-3 justify-center">
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      alert('連結已複製到剪貼簿！');
-                    }}
-                    className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm"
-                  >
-                    📋 複製連結
-                  </button>
-                  <button
-                    onClick={() => {
-                      // 這裡可以添加分享到社群的邏輯
-                      alert('分享功能開發中...');
-                    }}
-                    className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors text-sm"
-                  >
-                    📱 分享到社群
-                  </button>
-                </div>
-                
-                <p className="text-xs text-gray-500">
-                  你的選擇可能影響小說的誕生！
-                </p>
+                {isGenerating ? (
+                  <div className="flex justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                    </div>
+                    
+                    <div className="text-sm text-gray-600 space-y-2">
+                      <p>📅 投票活動持續 {process.env.NEXT_PUBLIC_VOTING_DURATION_DAYS || 7} 天</p>
+                      <p>🔗 你也可以分享連結邀請朋友一起投票</p>
+                    </div>
+                    
+                    <div className="flex space-x-3 justify-center">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(window.location.href);
+                          alert('連結已複製到剪貼簿！');
+                        }}
+                        className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors text-sm"
+                      >
+                        📋 複製連結
+                      </button>
+                      <button
+                        onClick={() => {
+                          // 這裡可以添加分享到社群的邏輯
+                          alert('分享功能開發中...');
+                        }}
+                        className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors text-sm"
+                      >
+                        📱 分享到社群
+                      </button>
+                    </div>
+                    
+                    <p className="text-xs text-gray-500">
+                      你的選擇可能影響小說的誕生！
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -890,7 +908,7 @@ export default function Origin() {
                   {options.outer.map((option) => {
                     const voteData = getCurrentVoteData('outer');
                     const votes = voteData[option.id as keyof typeof voteData] || 0;
-                    const isLeading = votes >= 100;
+                    const isLeading = votes >= parseInt(process.env.NEXT_PUBLIC_VOTING_THRESHOLD || '100');
                     
                     return (
                       <OptionCard
@@ -949,7 +967,7 @@ export default function Origin() {
                   {options.middle.map((option) => {
                     const voteData = getCurrentVoteData('middle');
                     const votes = voteData[option.id as keyof typeof voteData] || 0;
-                    const isLeading = votes >= 100;
+                    const isLeading = votes >= parseInt(process.env.NEXT_PUBLIC_VOTING_THRESHOLD || '100');
                     
                     return (
                       <OptionCard
@@ -1008,7 +1026,7 @@ export default function Origin() {
                   {options.inner.map((option) => {
                     const voteData = getCurrentVoteData('inner');
                     const votes = voteData[option.id as keyof typeof voteData] || 0;
-                    const isLeading = votes >= 100;
+                    const isLeading = votes >= parseInt(process.env.NEXT_PUBLIC_VOTING_THRESHOLD || '100');
                     
                     return (
                       <OptionCard
@@ -1034,18 +1052,29 @@ export default function Origin() {
               <>
                 <button
                   onClick={handleVote}
-                  disabled={!selectedOptions.outer || !selectedOptions.middle || !selectedOptions.inner}
+                  disabled={!selectedOptions.outer || !selectedOptions.middle || !selectedOptions.inner || isVoting || votingInProgress.current}
                   className={`px-12 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform ${
-                    selectedOptions.outer && selectedOptions.middle && selectedOptions.inner
+                    selectedOptions.outer && selectedOptions.middle && selectedOptions.inner && !isVoting
                       ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 hover:scale-105 hover:shadow-2xl shadow-xl ring-4 ring-primary-200 hover:ring-primary-300'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
                   <span className="flex items-center justify-center">
-                    <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    投下一票
+                    {isVoting ? (
+                      <>
+                        <svg className="w-6 h-6 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        投票中...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        投下一票
+                      </>
+                    )}
                   </span>
                 </button>
                 {selectedOptions.outer && selectedOptions.middle && selectedOptions.inner && (

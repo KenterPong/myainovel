@@ -146,6 +146,11 @@ NEXT_PUBLIC_GA_ID=your-google-analytics-id
 
 # AI 服務設定
 OPENAI_API_KEY=your-openai-api-key
+
+# 投票系統設定
+NEXT_PUBLIC_VOTING_THRESHOLD=100    //票數達成門檻
+NEXT_PUBLIC_VOTING_DURATION_DAYS=7  //投票持續天數
+NEXT_PUBLIC_VOTING_COOLDOWN_HOURS=24  //可重複投票時間
 ```
 
 ## 📁 專案結構
@@ -445,16 +450,49 @@ AI 生成的 JSON 結構會自動對應到以下資料庫欄位：
 | `setting_data` | `JSONB` | **核心資料**：詳細的設定資訊和章節大綱 | **最重要欄位！** 持續更新 |
 | `last_updated_at` | `TIMESTAMP WITH TIME ZONE` | 記錄最後更新時間 | 方便追蹤設定的修改 |
 
+##### 4. `origin_votes` (故事起源投票記錄表)
+記錄每個使用者的投票行為，用於防重複投票和投票統計。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `vote_id` | `UUID` | **主鍵**：每個投票記錄的唯一 ID | |
+| `story_id` | `UUID` | **外鍵**：指向所屬的故事 | 確保投票歸屬 |
+| `voter_ip` | `VARCHAR(45)` | **投票者 IP 地址** | 用於防重複投票 |
+| `voter_session` | `VARCHAR(255)` | **投票者會話 ID** | 追蹤投票行為 |
+| `outer_choice` | `VARCHAR(50)` | **故事類型選擇** | 對應 outer 分類選項 |
+| `middle_choice` | `VARCHAR(50)` | **故事背景選擇** | 對應 middle 分類選項 |
+| `inner_choice` | `VARCHAR(50)` | **故事主題選擇** | 對應 inner 分類選項 |
+| `voted_at` | `TIMESTAMP WITH TIME ZONE` | **投票時間** | 用於時間限制檢查 |
+| `user_agent` | `TEXT` | **瀏覽器資訊** | 可選，用於分析 |
+
+##### 5. `origin_vote_totals` (故事起源投票統計表)
+即時統計各選項的票數，用於快速查詢和門檻檢查。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `total_id` | `SERIAL` | 主鍵 | |
+| `story_id` | `UUID` | **外鍵**：指向所屬的故事 | 確保統計歸屬 |
+| `category` | `VARCHAR(20)` | **投票分類** | 'outer', 'middle', 'inner' |
+| `option_id` | `VARCHAR(50)` | **選項 ID** | 對應各分類的選項 |
+| `vote_count` | `INTEGER` | **票數統計** | 即時更新，用於門檻檢查 |
+| `last_updated` | `TIMESTAMP WITH TIME ZONE` | **最後更新時間** | 追蹤統計更新 |
+
 #### 資料表關聯設計
 
 ```
 stories (1) ←→ (N) chapters
     ↓
     (1) ←→ (N) story_settings
+    ↓
+    (1) ←→ (N) origin_votes
+    ↓
+    (1) ←→ (N) origin_vote_totals
 ```
 
 - **`chapters.story_id`** → `stories.story_id` (外鍵)
 - **`story_settings.story_id`** → `stories.story_id` (外鍵)
+- **`origin_votes.story_id`** → `stories.story_id` (外鍵)
+- **`origin_vote_totals.story_id`** → `stories.story_id` (外鍵)
 
 #### JSONB 欄位格式範例
 
@@ -560,7 +598,50 @@ stories (1) ←→ (N) chapters
    - **同步更新** `story_settings` 的章節大綱 `setting_data`
    - 核對新章節是否符合憲法級設定，違背則重新生成
 
-#### 投票機制與自動生成規則
+#### 故事起源投票機制
+
+##### 基本投票規則
+
+1. **投票門檻**：每個分類需要達到 100 票才能觸發 AI 生成
+2. **投票限制**：每個 IP 地址每 24 小時只能投票一次
+3. **投票有效期**：投票活動持續 7 天
+4. **觸發條件**：三個分類都達到 100 票時自動觸發 AI 故事生成
+5. **新故事建立**：如果指定的故事 ID 不存在，系統會自動建立新故事並開始投票
+
+##### 投票防作弊機制
+
+1. **IP 限制**：同一 IP 短時間內只能投票一次
+2. **會話追蹤**：使用會話 ID 追蹤投票行為
+3. **時間限制**：24 小時內同一 IP 和會話組合只能投票一次
+4. **投票驗證**：檢查投票時間是否在有效期內
+
+##### 即時投票統計
+
+1. **即時更新**：投票後立即更新統計數據
+2. **結果展示**：顯示各選項的即時票數和排名
+3. **門檻監控**：即時檢查是否達到 100 票門檻
+4. **最終結果**：投票結束後公布最終結果並觸發 AI 生成
+5. **新的投票**：AI生成存到資料庫後，就將所有投票紀錄清空，開始新一輪投票
+
+##### 投票 API 端點
+
+- **POST `/api/origin/vote`**：提交投票
+- **GET `/api/origin/vote?storyId=xxx`**：獲取投票統計
+- **POST `/api/origin/clear-votes`**：清空投票記錄（內部使用）
+
+##### 環境變數設定
+
+投票系統的門檻和時間設定可透過環境變數調整，無需修改程式碼：
+
+| 環境變數 | 預設值 | 說明 |
+|---------|--------|------|
+| `NEXT_PUBLIC_VOTING_THRESHOLD` | 100 | 每個分類達到此票數才觸發 AI 生成 |
+| `NEXT_PUBLIC_VOTING_DURATION_DAYS` | 7 | 投票活動持續天數 |
+| `NEXT_PUBLIC_VOTING_COOLDOWN_HOURS` | 24 | 同一 IP 投票冷卻時間（小時） |
+
+**設定位置**：在 `.env.local` 檔案中修改這些變數值即可調整投票規則。
+
+#### 章節投票機制與自動生成規則
 
 ##### 章節生成後的自動化流程
 

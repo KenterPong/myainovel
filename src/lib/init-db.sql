@@ -131,7 +131,113 @@ ALTER TABLE story_settings
 ADD CONSTRAINT chk_story_settings_type 
 CHECK (setting_type IN ('角色', '世界觀', '大綱'));
 
--- 8. 插入範例資料（可選）
+-- 8. 建立故事起源投票相關資料表
+
+-- 8.1 建立 origin_votes 表（故事起源投票記錄表）
+CREATE TABLE IF NOT EXISTS origin_votes (
+    vote_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    story_id UUID NOT NULL,
+    voter_ip VARCHAR(45) NOT NULL,
+    voter_session VARCHAR(255) NOT NULL,
+    outer_choice VARCHAR(50) NOT NULL,
+    middle_choice VARCHAR(50) NOT NULL,
+    inner_choice VARCHAR(50) NOT NULL,
+    voted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    user_agent TEXT,
+    
+    -- 外鍵約束
+    CONSTRAINT fk_origin_votes_story_id 
+        FOREIGN KEY (story_id) 
+        REFERENCES stories(story_id) 
+        ON DELETE CASCADE,
+    
+    -- 唯一約束：同一 IP 和會話組合在 24 小時內只能投票一次
+    CONSTRAINT uk_origin_votes_ip_session_time 
+        UNIQUE (voter_ip, voter_session, DATE(voted_at))
+);
+
+-- 8.2 建立 origin_vote_totals 表（故事起源投票統計表）
+CREATE TABLE IF NOT EXISTS origin_vote_totals (
+    total_id SERIAL PRIMARY KEY,
+    story_id UUID NOT NULL,
+    category VARCHAR(20) NOT NULL,
+    option_id VARCHAR(50) NOT NULL,
+    vote_count INTEGER DEFAULT 0,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- 外鍵約束
+    CONSTRAINT fk_origin_vote_totals_story_id 
+        FOREIGN KEY (story_id) 
+        REFERENCES stories(story_id) 
+        ON DELETE CASCADE,
+    
+    -- 唯一約束：每個故事的每個分類的每個選項只能有一條統計記錄
+    CONSTRAINT uk_origin_vote_totals_story_category_option 
+        UNIQUE (story_id, category, option_id)
+);
+
+-- 8.3 建立索引以提升查詢效能
+-- origin_votes 表索引
+CREATE INDEX IF NOT EXISTS idx_origin_votes_story_id ON origin_votes(story_id);
+CREATE INDEX IF NOT EXISTS idx_origin_votes_voter_ip ON origin_votes(voter_ip);
+CREATE INDEX IF NOT EXISTS idx_origin_votes_voted_at ON origin_votes(voted_at);
+CREATE INDEX IF NOT EXISTS idx_origin_votes_ip_session ON origin_votes(voter_ip, voter_session);
+
+-- origin_vote_totals 表索引
+CREATE INDEX IF NOT EXISTS idx_origin_vote_totals_story_id ON origin_vote_totals(story_id);
+CREATE INDEX IF NOT EXISTS idx_origin_vote_totals_category ON origin_vote_totals(category);
+CREATE INDEX IF NOT EXISTS idx_origin_vote_totals_vote_count ON origin_vote_totals(vote_count);
+
+-- 8.4 建立觸發器函數：自動更新投票統計
+CREATE OR REPLACE FUNCTION update_origin_vote_totals()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 更新 outer 分類統計
+    INSERT INTO origin_vote_totals (story_id, category, option_id, vote_count, last_updated)
+    VALUES (NEW.story_id, 'outer', NEW.outer_choice, 1, NOW())
+    ON CONFLICT (story_id, category, option_id) 
+    DO UPDATE SET 
+        vote_count = origin_vote_totals.vote_count + 1,
+        last_updated = NOW();
+    
+    -- 更新 middle 分類統計
+    INSERT INTO origin_vote_totals (story_id, category, option_id, vote_count, last_updated)
+    VALUES (NEW.story_id, 'middle', NEW.middle_choice, 1, NOW())
+    ON CONFLICT (story_id, category, option_id) 
+    DO UPDATE SET 
+        vote_count = origin_vote_totals.vote_count + 1,
+        last_updated = NOW();
+    
+    -- 更新 inner 分類統計
+    INSERT INTO origin_vote_totals (story_id, category, option_id, vote_count, last_updated)
+    VALUES (NEW.story_id, 'inner', NEW.inner_choice, 1, NOW())
+    ON CONFLICT (story_id, category, option_id) 
+    DO UPDATE SET 
+        vote_count = origin_vote_totals.vote_count + 1,
+        last_updated = NOW();
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 建立觸發器
+CREATE TRIGGER trigger_update_origin_vote_totals
+    AFTER INSERT ON origin_votes
+    FOR EACH ROW
+    EXECUTE FUNCTION update_origin_vote_totals();
+
+-- 8.5 建立檢查約束
+-- 確保分類是有效值
+ALTER TABLE origin_vote_totals 
+ADD CONSTRAINT chk_origin_vote_totals_category 
+CHECK (category IN ('outer', 'middle', 'inner'));
+
+-- 確保投票計數不能為負數
+ALTER TABLE origin_vote_totals 
+ADD CONSTRAINT chk_origin_vote_totals_vote_count 
+CHECK (vote_count >= 0);
+
+-- 9. 插入範例資料（可選）
 -- 建立一個範例故事
 INSERT INTO stories (story_serial, title, status, origin_voting_start_date) 
 VALUES ('A00001', '測試故事', '投票中', NOW())

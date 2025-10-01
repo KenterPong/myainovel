@@ -136,7 +136,7 @@ async function checkDatabaseStatus() {
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
-      AND table_name IN ('stories', 'chapters', 'story_settings')
+      AND table_name IN ('stories', 'chapters', 'story_settings', 'origin_votes', 'origin_vote_totals')
       ORDER BY table_name
     `);
 
@@ -153,6 +153,14 @@ async function checkDatabaseStatus() {
     // 檢查設定數量
     const settingsResult = await client.query('SELECT COUNT(*) as count FROM story_settings');
     console.log('⚙️ 設定數量:', settingsResult.rows[0].count);
+
+    // 檢查投票記錄數量
+    const votesResult = await client.query('SELECT COUNT(*) as count FROM origin_votes');
+    console.log('🗳️ 投票記錄數量:', votesResult.rows[0].count);
+
+    // 檢查投票統計數量
+    const voteTotalsResult = await client.query('SELECT COUNT(*) as count FROM origin_vote_totals');
+    console.log('📊 投票統計數量:', voteTotalsResult.rows[0].count);
 
     client.release();
   } catch (error) {

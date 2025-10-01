@@ -321,11 +321,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 故事生成成功後，清空投票記錄開始新一輪投票
+    try {
+      const clearResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/origin/clear-votes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ storyId })
+      });
+      
+      if (clearResponse.ok) {
+        console.log('✅ 投票記錄已清空，開始新一輪投票');
+      } else {
+        console.log('⚠️ 清空投票記錄失敗，但故事已生成');
+      }
+    } catch (clearError) {
+      console.log('⚠️ 清空投票記錄時發生錯誤:', clearError);
+    }
+
     return NextResponse.json({
       success: true,
       storyId,
       storyData,
-      message: '故事設定生成成功並已儲存到資料庫'
+      message: '故事設定生成成功並已儲存到資料庫，投票記錄已清空'
     });
 
   } catch (error) {
