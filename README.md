@@ -38,6 +38,14 @@
 - ✅ 錯誤處理與資料清理
 - ✅ 視覺化故事展示介面
 
+### 互動式投票系統
+- ✅ 故事起源投票機制
+- ✅ 章節投票統計系統
+- ✅ 即時投票統計更新
+- ✅ 防作弊機制（IP + Session 限制）
+- ✅ 投票觸發 AI 生成
+- ✅ 響應式投票介面
+
 ## 📦 使用方式
 
 ### 1. 從樣板建立新專案
@@ -151,6 +159,11 @@ OPENAI_API_KEY=your-openai-api-key
 NEXT_PUBLIC_VOTING_THRESHOLD=100    //票數達成門檻
 NEXT_PUBLIC_VOTING_DURATION_DAYS=7  //投票持續天數
 NEXT_PUBLIC_VOTING_COOLDOWN_HOURS=24  //可重複投票時間
+
+# 章節投票系統設定
+NEXT_PUBLIC_CHAPTER_VOTING_THRESHOLD=100  //章節投票選項達到此票數才觸發 AI 生成
+NEXT_PUBLIC_CHAPTER_VOTING_DURATION_HOURS=24  //章節投票持續時間（小時）
+NEXT_PUBLIC_CHAPTER_VOTING_COOLDOWN_HOURS=24  //章節投票冷卻時間（小時）
 ```
 
 ## 📁 專案結構
@@ -171,6 +184,10 @@ myainovel/
 │   │   ├── origin/
 │   │   │   ├── layout.tsx
 │   │   │   └── page.tsx
+│   │   ├── api/                # API 路由
+│   │   │   ├── origin/         # 故事起源投票 API
+│   │   │   ├── stories/        # 故事相關 API
+│   │   │   └── ai/             # AI 生成 API
 │   │   ├── page.tsx            # Root page
 │   │   ├── layout.tsx          # Root layout (全域共用框架)
 │   │   ├── globals.css         # 全域 CSS (唯一允許的全域樣式)
@@ -185,17 +202,31 @@ myainovel/
 │   │   ├── Footer.tsx
 │   │   ├── Sidebar.tsx
 │   │   ├── MobileNav.tsx
-│   │   └── RightSidebar.tsx
+│   │   ├── RightSidebar.tsx
+│   │   ├── StoryCard.tsx       # 故事卡片組件
+│   │   ├── ChapterVotingSection.tsx  # 章節投票區域
+│   │   ├── VoteOption.tsx      # 投票選項組件
+│   │   ├── LoadingState.tsx    # 載入狀態組件
+│   │   ├── ErrorState.tsx      # 錯誤狀態組件
+│   │   └── EmptyState.tsx      # 空資料狀態組件
 │   │
 │   ├── lib/                    # 共用函式庫 (官方建議名稱)
 │   │   ├── hooks/              # React Hooks
-│   │   └── utils/              # 工具函式
+│   │   │   ├── useHomeData.ts  # 首頁資料獲取
+│   │   │   ├── useChapterVoting.ts  # 章節投票管理
+│   │   │   ├── useOriginVoting.ts   # 故事起源投票
+│   │   │   └── useVotePolling.ts    # 投票統計輪詢
+│   │   ├── utils/              # 工具函式
+│   │   └── db.ts               # 資料庫連線
 │   │
 │   ├── styles/                 # 額外樣式 (若需模組化)
 │   │   └── variables.css
 │   │
 │   └── types/                  # TypeScript 型別定義 (可選)
-│       └── user.d.ts
+│       ├── story.ts            # 故事型別定義
+│       ├── chapter.ts          # 章節型別定義
+│       ├── voting.ts           # 投票型別定義
+│       └── user.ts             # 用戶型別定義
 │
 ├── .env.local                  # 環境變數 (gitignore)
 ├── next.config.js              # Next.js 設定檔
@@ -668,6 +699,54 @@ chapters (1) ←→ (N) chapter_votes
 - **POST `/api/stories/[id]/chapters/[chapterId]/vote`**：提交章節投票
 - **GET `/api/stories/[id]/chapters/[chapterId]/vote`**：獲取章節投票統計
 
+##### 章節投票 API 端點詳細說明
+
+###### 1. 章節投票 API
+```typescript
+// POST /api/stories/[id]/chapters/[chapterId]/vote
+interface ChapterVoteRequest {
+  optionId: string; // 'A', 'B', 'C'
+  voterSession: string;
+}
+
+interface ChapterVoteResponse {
+  success: boolean;
+  data: {
+    voteCounts: {
+      A: number;
+      B: number;
+      C: number;
+    };
+    totalVotes: number;
+    userVoted: boolean;
+    thresholdReached: boolean;
+    triggerGeneration: boolean;
+  };
+}
+```
+
+###### 2. 投票統計 API
+```typescript
+// GET /api/stories/[id]/chapters/[chapterId]/vote
+interface VoteStatsResponse {
+  success: boolean;
+  data: {
+    chapterId: number;
+    votingStatus: '進行中' | '已截止' | '已生成';
+    votingDeadline: string;
+    voteCounts: {
+      A: number;
+      B: number;
+      C: number;
+    };
+    totalVotes: number;
+    userVoted: boolean;
+    userChoice?: string;
+    threshold: number;
+  };
+}
+```
+
 ##### 環境變數設定
 
 投票系統的門檻和時間設定可透過環境變數調整，無需修改程式碼：
@@ -684,6 +763,10 @@ chapters (1) ←→ (N) chapter_votes
 **設定位置**：在 `.env.local` 檔案中修改這些變數值即可調整投票規則。
 
 #### 章節投票機制與自動生成規則
+
+##### 章節投票統計系統完整架構
+
+本系統實現了完整的章節投票統計功能，包含投票記錄、即時統計、防作弊機制和自動觸發 AI 生成等核心功能。
 
 ##### 章節生成後的自動化流程
 
@@ -709,6 +792,21 @@ chapters (1) ←→ (N) chapter_votes
    - **時間限制**：投票必須在有效期內進行
    - **選項驗證**：確保投票選項有效（A、B、C）
    - **重複投票檢查**：防止同一用戶重複投票
+
+##### 投票觸發 AI 生成條件
+
+1. **單一選項達到門檻**：任一選項票數達到環境設定門檻（預設 100 票）
+2. **立即觸發生成**：使用該選項作為故事走向生成下一章
+3. **更新章節狀態**：將投票狀態更新為「已生成」
+
+##### 投票流程圖
+```
+用戶投票 → 更新統計 → 檢查門檻 → 達到門檻？
+                                    ↓
+                              是：觸發 AI 生成
+                                    ↓
+                              更新章節狀態
+```
 
 ##### 自動生成下一章的條件
 
@@ -769,6 +867,50 @@ chapters (1) ←→ (N) chapter_votes
 
 #### 資料整合架構
 
+##### 首頁資料獲取策略
+```typescript
+interface HomePageData {
+  stories: StoryWithChapter[];
+}
+
+interface StoryWithChapter {
+  // 來自 stories 表
+  story_id: string;
+  title: string;
+  status: '投票中' | '撰寫中' | '已完結';
+  created_at: string;
+  
+  // 來自 chapters 表 (最新章節)
+  current_chapter: {
+    chapter_id: number;
+    chapter_number: string;
+    title: string;
+    full_text: string;
+    summary: string;
+    tags: string[];
+    voting_status: '進行中' | '已截止' | '已生成';
+    voting_deadline?: string;
+    voting_options?: VotingOption[];
+    created_at: string;
+  };
+  
+  // 來自 chapter_vote_totals 表
+  vote_stats?: {
+    A: number;
+    B: number;
+    C: number;
+    total: number;
+  };
+  
+  // 來自 story_settings 表
+  settings?: {
+    characters?: any;
+    worldview?: any;
+    outline?: any;
+  };
+}
+```
+
 ##### API 端點整合
 - `GET /api/stories` - 獲取故事列表
 - `GET /api/stories/[id]` - 獲取故事詳情
@@ -785,18 +927,89 @@ chapters (1) ←→ (N) chapter_votes
 #### 技術實作
 
 ##### 自定義 Hooks
-- `useHomeData` - 首頁資料獲取和管理
-- `useOriginVoting` - 故事起源投票狀態管理
-- `useChapterVoting` - 章節投票功能
-- `useVotePolling` - 投票統計輪詢
+
+###### 1. useHomeData - 首頁資料獲取
+```typescript
+export function useHomeData() {
+  const [stories, setStories] = useState<StoryWithChapter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // 獲取故事列表和最新章節
+  // 處理載入狀態和錯誤
+  // 提供重新載入功能
+}
+```
+
+###### 2. useChapterVoting - 章節投票管理
+```typescript
+export function useChapterVoting(chapterId: number) {
+  const [voteStats, setVoteStats] = useState<VoteStats | null>(null);
+  const [userVoted, setUserVoted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // 獲取投票統計
+  // 提交投票
+  // 即時更新統計
+  // 檢查門檻觸發
+}
+```
+
+###### 3. useVotePolling - 投票統計輪詢
+```typescript
+export function useVotePolling(chapterId: number, enabled: boolean) {
+  // 定期更新投票統計
+  // 處理網路錯誤
+  // 優化輪詢頻率
+}
+```
+
+###### 4. useOriginVoting - 故事起源投票
+```typescript
+export function useOriginVoting(storyId: string) {
+  // 故事起源投票狀態管理
+  // 投票提交和統計更新
+  // 門檻檢查和觸發邏輯
+}
 
 ##### 組件架構
-- `StoryCard` - 故事卡片組件
-- `OriginVotingSection` - 故事起源投票區域
-- `ChapterVotingSection` - 章節投票區域
-- `VoteOption` - 投票選項組件
+
+###### 1. StoryCard - 故事卡片組件
+```typescript
+interface StoryCardProps {
+  story: StoryWithChapter;
+  onVote?: (optionId: string) => void;
+  onViewDetails?: () => void;
+}
+```
+
+###### 2. ChapterVotingSection - 章節投票區域
+```typescript
+interface VotingSectionProps {
+  chapterId: number;
+  votingOptions: VotingOption[];
+  voteStats: VoteStats;
+  onVote: (optionId: string) => void;
+  disabled?: boolean;
+}
+```
+
+###### 3. VoteOption - 投票選項組件
+```typescript
+interface VoteOptionProps {
+  option: VotingOption;
+  voteCount: number;
+  percentage: number;
+  isSelected: boolean;
+  onSelect: () => void;
+  disabled?: boolean;
+}
+```
+
+###### 4. 狀態管理組件
 - `LoadingState` - 載入狀態組件
 - `ErrorState` - 錯誤狀態組件
+- `EmptyState` - 空資料狀態組件
 
 ##### 型別定義
 ```typescript
@@ -823,15 +1036,54 @@ interface StoryWithChapter {
 
 #### 效能優化
 
-##### 資料快取
-- 使用 React Query 快取 API 資料
-- 實現智慧型資料更新策略
-- 避免不必要的 API 呼叫
+##### 關鍵技術考量
 
-##### 載入優化
-- 分頁載入更多故事
-- 圖片懶載入
-- 虛擬滾動處理大量資料
+###### 1. 資料快取策略
+- **React Query 快取** - 快取 API 資料
+- **智慧型更新** - 避免不必要的 API 呼叫
+- **本地狀態同步** - 確保 UI 與後端資料一致
+
+###### 2. 分頁載入機制
+- **無限滾動** - 載入更多故事
+- **虛擬滾動** - 處理大量投票選項
+- **懶載入** - 圖片和組件按需載入
+
+###### 3. 樂觀更新策略
+- **立即更新 UI** - 投票後立即顯示結果
+- **後端驗證** - 確保投票有效性
+- **錯誤回滾** - 投票失敗時恢復原狀態
+
+###### 4. 投票限制策略
+- **IP + Session 限制** - 防止重複投票
+- **時間窗口限制** - 投票有效期管理
+- **頻率限制** - 防止惡意投票
+
+###### 5. 即時更新策略
+- **輪詢機制** - 定期更新投票統計
+- **WebSocket** - 即時推送更新（可選）
+- **狀態同步** - 確保多用戶間資料一致
+
+##### 用戶體驗設計
+
+###### 投票流程
+1. **載入狀態** - 顯示載入動畫
+2. **投票選項** - 清晰的選項展示
+3. **即時統計** - 動態更新票數和百分比
+4. **投票回饋** - 成功投票後的視覺回饋
+5. **結果展示** - 投票截止後的結果展示
+6. **AI 生成提示** - 達到門檻時的生成提示
+
+###### 響應式設計
+- **手機版** - 垂直排列投票選項
+- **桌面版** - 網格排列投票選項
+- **平板版** - 自適應佈局
+
+###### 效能優化
+- **載入狀態指示器** - 提供良好的載入體驗
+- **錯誤重試機制** - 完善的錯誤提示和重試機制
+- **響應式動畫效果** - 流暢的用戶互動體驗
+
+#### 驗收標準
 
 ##### 用戶體驗
 - 載入狀態指示器

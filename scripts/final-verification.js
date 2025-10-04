@@ -36,7 +36,6 @@ async function finalVerification() {
     `);
     
     const expectedTables = [
-      'ai_generation_history',
       'chapter_vote_totals', 
       'chapter_votes',
       'chapters',
@@ -55,29 +54,6 @@ async function finalVerification() {
       console.log('❌ 缺少資料表:', missingTables.join(', '));
     }
 
-    // 2. 檢查 AI 生成歷史記錄
-    console.log('\n🤖 檢查 AI 生成歷史記錄...');
-    const historyResult = await client.query(`
-      SELECT COUNT(*) as total
-      FROM ai_generation_history
-    `);
-    
-    const totalHistory = parseInt(historyResult.rows[0].total);
-    console.log(`📊 AI 生成歷史記錄總數: ${totalHistory}`);
-    
-    if (totalHistory > 0) {
-      const recentHistory = await client.query(`
-        SELECT generation_id, status, created_at
-        FROM ai_generation_history
-        ORDER BY created_at DESC
-        LIMIT 5
-      `);
-      
-      console.log('📋 最近的生成記錄:');
-      recentHistory.rows.forEach((record, index) => {
-        console.log(`  ${index + 1}. ${record.generation_id} - ${record.status} (${record.created_at})`);
-      });
-    }
 
     // 3. 檢查故事和章節狀態
     console.log('\n📚 檢查故事和章節狀態...');

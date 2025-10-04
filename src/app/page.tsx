@@ -7,7 +7,6 @@ import { LoadingState } from '@/components/LoadingState'
 import { ErrorState } from '@/components/ErrorState'
 import { EmptyState } from '@/components/EmptyState'
 import { AdminLink } from '@/components/AdminLink'
-import MobileRecommendations from '@/components/MobileRecommendations'
 
 export default function Home() {
   const router = useRouter()
@@ -61,11 +60,6 @@ export default function Home() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* 頁面標題 */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">最新章節</h1>
-        <p className="text-gray-600">跟隨故事的最新發展</p>
-      </div>
 
       {/* 載入狀態 */}
       {loading && <LoadingState message="載入故事中..." />}
@@ -102,9 +96,6 @@ export default function Home() {
         </div>
       )}
       
-             {/* 行動版推薦故事 */}
-             <MobileRecommendations />
-             
              {/* 管理頁面連結 */}
              <AdminLink />
            </div>

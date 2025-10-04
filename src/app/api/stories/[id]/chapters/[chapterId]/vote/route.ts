@@ -95,11 +95,10 @@ async function checkVotingThreshold(chapterId: string): Promise<{
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; chapterId: string } }
+  { params }: { params: Promise<{ id: string; chapterId: string }> }
 ) {
   try {
-    const storyId = params.id;
-    const chapterId = params.chapterId;
+    const { id: storyId, chapterId } = await params;
     const body = await request.json();
     const { optionId, voterSession } = body;
 
@@ -241,106 +240,8 @@ export async function POST(
             const winningOptionData = votingOptions.options.find((opt: any) => opt.id === winningOption.option_id);
 
             if (winningOptionData) {
-              // 記錄 AI 生成歷史（開始）
-              const generationId = 'gen_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-              await query(`
-                INSERT INTO ai_generation_history (
-                  generation_id, story_id, chapter_id, generation_type,
-                  input_data, output_data, processing_time, status
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-              `, [
-                generationId,
-                storyId,
-                chapterId,
-                'chapter',
-                JSON.stringify({
-                  storyId,
-                  chapterId,
-                  votingResult: {
-                    optionId: winningOption.option_id,
-                    content: winningOptionData.content,
-                    description: winningOptionData.description,
-                    voteCount: winningOption.vote_count,
-                    percentage
-                  }
-                }),
-                null,
-                0,
-                'pending'
-              ]);
-
-              // 觸發 AI 生成
-              try {
-                const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/ai/generate`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    storyId,
-                    chapterId,
-                    previousContext: chapterData.rows[0].full_text,
-                    votingResult: {
-                      optionId: winningOption.option_id,
-                      content: winningOptionData.content,
-                      description: winningOptionData.description,
-                      voteCount: winningOption.vote_count,
-                      percentage
-                    },
-                    generationType: 'chapter'
-                  })
-                });
-
-                if (aiResponse.ok) {
-                  const aiData = await aiResponse.json();
-                  if (aiData.success) {
-                    console.log('AI 生成成功:', aiData.data.generationId);
-                    // 更新生成歷史為成功
-                    await query(`
-                      UPDATE ai_generation_history 
-                      SET status = 'completed', output_data = $1, processing_time = $2
-                      WHERE generation_id = $3
-                    `, [
-                      JSON.stringify(aiData.data),
-                      aiData.data.processingTime || 0,
-                      generationId
-                    ]);
-                  } else {
-                    console.error('AI 生成失敗:', aiData.message);
-                    // 更新生成歷史為失敗
-                    await query(`
-                      UPDATE ai_generation_history 
-                      SET status = 'failed', output_data = $1
-                      WHERE generation_id = $3
-                    `, [
-                      JSON.stringify({ error: aiData.message }),
-                      generationId
-                    ]);
-                  }
-                } else {
-                  console.error('AI 生成請求失敗:', aiResponse.status);
-                  // 更新生成歷史為失敗
-                  await query(`
-                    UPDATE ai_generation_history 
-                    SET status = 'failed', output_data = $1
-                    WHERE generation_id = $2
-                  `, [
-                    JSON.stringify({ error: `HTTP ${aiResponse.status}` }),
-                    generationId
-                  ]);
-                }
-              } catch (aiError) {
-                console.error('AI 生成調用失敗:', aiError);
-                // 更新生成歷史為失敗
-                await query(`
-                  UPDATE ai_generation_history 
-                  SET status = 'failed', output_data = $1
-                  WHERE generation_id = $2
-                `, [
-                  JSON.stringify({ error: aiError.message }),
-                  generationId
-                ]);
-              }
+              console.log('投票結束，獲勝選項:', winningOptionData.content);
+              // 這裡可以添加其他投票結束後的處理邏輯
             }
           }
         }
@@ -389,11 +290,10 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; chapterId: string } }
+  { params }: { params: Promise<{ id: string; chapterId: string }> }
 ) {
   try {
-    const storyId = params.id;
-    const chapterId = params.chapterId;
+    const { id: storyId, chapterId } = await params;
     const voterIP = getClientIP(request);
     const voterSession = request.headers.get('x-session-id') || '';
 

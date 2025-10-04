@@ -134,24 +134,6 @@ async function testErrorHandling() {
       console.log('❌ 門檻投票失敗:', thresholdVoteResponse.status);
     }
 
-    // 4. 檢查 AI 生成歷史記錄
-    console.log('\n📋 檢查 AI 生成歷史記錄...');
-    
-    const historyCheck = await client.query(`
-      SELECT generation_id, status, created_at
-      FROM ai_generation_history 
-      WHERE story_id = $1
-      ORDER BY created_at DESC
-    `, [storyId]);
-    
-    if (historyCheck.rows.length > 0) {
-      console.log('✅ AI 生成歷史記錄:');
-      historyCheck.rows.forEach((row, index) => {
-        console.log(`  ${index + 1}. ${row.generation_id} - ${row.status} (${row.created_at})`);
-      });
-    } else {
-      console.log('⚠️ 沒有找到 AI 生成歷史記錄');
-    }
 
     // 5. 檢查章節狀態
     console.log('\n📊 檢查章節狀態...');
@@ -187,7 +169,6 @@ async function testErrorHandling() {
     // 7. 清理測試資料
     console.log('\n🧹 清理測試資料...');
     
-    await client.query('DELETE FROM ai_generation_history WHERE story_id = $1', [storyId]);
     await client.query('DELETE FROM chapter_votes WHERE story_id = $1', [storyId]);
     await client.query('DELETE FROM chapter_vote_totals WHERE story_id = $1', [storyId]);
     await client.query('DELETE FROM chapters WHERE story_id = $1', [storyId]);

@@ -29,14 +29,12 @@ async function cleanAndSetupDatabase() {
     console.log('🧹 清理現有測試資料...');
     
     // 清理所有測試相關的資料
-    await client.query('DELETE FROM ai_generation_history WHERE story_id::text LIKE \'550e8400-e29b-41d4-a716-446655440%\'');
     await client.query('DELETE FROM chapter_votes WHERE story_id::text LIKE \'550e8400-e29b-41d4-a716-446655440%\'');
     await client.query('DELETE FROM chapter_vote_totals WHERE story_id::text LIKE \'550e8400-e29b-41d4-a716-446655440%\'');
     await client.query('DELETE FROM chapters WHERE story_id::text LIKE \'550e8400-e29b-41d4-a716-446655440%\'');
     await client.query('DELETE FROM stories WHERE story_id::text LIKE \'550e8400-e29b-41d4-a716-446655440%\'');
     
     // 清理其他測試資料
-    await client.query('DELETE FROM ai_generation_history WHERE story_id::text LIKE \'test%\'');
     await client.query('DELETE FROM chapter_votes WHERE story_id::text LIKE \'test%\'');
     await client.query('DELETE FROM chapter_vote_totals WHERE story_id::text LIKE \'test%\'');
     await client.query('DELETE FROM chapters WHERE story_id::text LIKE \'test%\'');

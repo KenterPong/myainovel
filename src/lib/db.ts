@@ -8,6 +8,8 @@ const pool = new Pool({
   port: parseInt(process.env.POSTGRES_PORT || '5432'),
   password: process.env.POSTGRES_PASSWORD || '1234',
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // 明確設定編碼為 UTF-8
+  client_encoding: 'utf8',
 });
 
 // 測試資料庫連線

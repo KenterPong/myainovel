@@ -61,23 +61,6 @@ async function quickTest() {
     `);
     console.log(`📊 投票統計記錄總數: ${voteTotalsResult.rows[0].count}`);
 
-    // 4. 檢查 AI 生成歷史
-    console.log('\n🤖 檢查 AI 生成歷史...');
-    const aiHistoryResult = await client.query(`
-      SELECT 
-        generation_id,
-        status,
-        processing_time,
-        created_at
-      FROM ai_generation_history
-      ORDER BY created_at DESC
-      LIMIT 5
-    `);
-    
-    console.log(`📊 AI 生成歷史記錄總數: ${aiHistoryResult.rows.length}`);
-    aiHistoryResult.rows.forEach((record, index) => {
-      console.log(`  ${index + 1}. ${record.generation_id} - ${record.status} (${record.processing_time}ms)`);
-    });
 
     // 5. 測試 API 端點
     console.log('\n🌐 測試 API 端點...');

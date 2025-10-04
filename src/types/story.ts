@@ -71,12 +71,15 @@ export interface StoryWithChapter {
     tags: string[];
     voting_status: '進行中' | '已截止' | '已生成';
     voting_deadline?: string;
-    voting_options?: Array<{
-      id: string;
-      content: string;
-      description: string;
-      votes: number;
-    }>;
+    voting_options?: {
+      options: Array<{
+        id: string;
+        content: string;
+        description: string;
+        votes: number;
+      }>;
+      total_votes: number;
+    };
     created_at: string;
   };
   

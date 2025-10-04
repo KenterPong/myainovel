@@ -95,11 +95,8 @@ export function ChapterVotingSection({
   // 投票已結束
   if (!voteStats?.isVotingActive) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          投票已結束
-        </h3>
-        <div className="text-gray-600">
+      <div className="bg-gray-50 rounded-lg p-4">
+        <div className="text-sm text-gray-600">
           {voteStats?.votingStatus === '已生成' ? '已根據投票結果生成下一章' : '投票時間已截止'}
         </div>
       </div>
@@ -111,69 +108,58 @@ export function ChapterVotingSection({
   const voteCounts = voteStats?.voteCounts || { A: 0, B: 0, C: 0 };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">
-          章節投票
-        </h3>
-        <div className="text-sm text-gray-500">
-          總票數: {totalVotes}
-        </div>
+    <div className="bg-gray-50 rounded-lg p-4">
+      <div className="text-sm text-gray-600 mb-4">
+        投票中 ({totalVotes}票) - 選擇故事發展方向
       </div>
 
-      {/* 投票選項 */}
-      <div className="space-y-4">
+      {/* 簡化的投票選項 */}
+      <div className="space-y-2">
         {votingOptions.map((option) => {
           const voteCount = voteCounts[option.id as keyof typeof voteCounts] || 0;
-          const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
           const isSelected = selectedOption === option.id || voteStats?.userChoice === option.id;
 
           return (
-            <VoteOption
+            <div
               key={option.id}
-              option={option}
-              voteCount={voteCount}
-              percentage={percentage}
-              isSelected={isSelected}
-              onSelect={() => handleVote(option.id)}
-              disabled={isSubmitting || voteStats?.userVoted || !voteStats?.isVotingActive}
-              totalVotes={totalVotes}
-            />
+              className={`
+                p-3 rounded-lg border cursor-pointer transition-all duration-200
+                ${isSelected 
+                  ? 'border-purple-500 bg-purple-50' 
+                  : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
+                }
+                ${isSubmitting || voteStats?.userVoted || !voteStats?.isVotingActive ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
+              onClick={() => !isSubmitting && voteStats?.isVotingActive && !voteStats?.userVoted && handleVote(option.id)}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-gray-900">
+                  {option.id} {option.content}
+                </span>
+                {totalVotes > 0 && (
+                  <span className="text-sm text-gray-500">
+                    {voteCount} 票
+                  </span>
+                )}
+              </div>
+            </div>
           );
         })}
       </div>
 
-      {/* 投票狀態資訊 */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <div>
-            {voteStats?.userVoted ? (
-              <span className="text-green-600">✓ 您已投票</span>
-            ) : (
-              <span>請選擇一個選項進行投票</span>
-            )}
-          </div>
-          {voteStats?.votingDeadline && (
-            <div>
-              截止時間: {new Date(voteStats.votingDeadline).toLocaleString('zh-TW')}
-            </div>
-          )}
+      {/* 簡化的投票狀態資訊 */}
+      {voteStats?.userVoted && (
+        <div className="mt-3 text-sm text-green-600">
+          ✓ 您已投票
         </div>
+      )}
 
-        {/* 門檻提示 */}
-        {voteStats?.thresholdReached && (
-          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span className="text-green-700">
-                投票已達到門檻，正在生成下一章...
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* 門檻提示 */}
+      {voteStats?.thresholdReached && (
+        <div className="mt-3 text-sm text-green-600">
+          投票已達到門檻，正在生成下一章...
+        </div>
+      )}
     </div>
   );
 }

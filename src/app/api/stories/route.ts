@@ -42,6 +42,10 @@ export async function GET(request: NextRequest) {
         offset,
         total: result.rows.length
       }
+    }, {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      }
     });
   } catch (error) {
     console.error('取得故事列表錯誤:', error);
