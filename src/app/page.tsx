@@ -6,6 +6,7 @@ import { StoryCard } from '@/components/StoryCard'
 import { LoadingState } from '@/components/LoadingState'
 import { ErrorState } from '@/components/ErrorState'
 import { EmptyState } from '@/components/EmptyState'
+import { AdminLink } from '@/components/AdminLink'
 import MobileRecommendations from '@/components/MobileRecommendations'
 
 export default function Home() {
@@ -101,9 +102,12 @@ export default function Home() {
         </div>
       )}
       
-      {/* 行動版推薦故事 */}
-      <MobileRecommendations />
-    </div>
-  );
-}
+             {/* 行動版推薦故事 */}
+             <MobileRecommendations />
+             
+             {/* 管理頁面連結 */}
+             <AdminLink />
+           </div>
+         );
+       }
 

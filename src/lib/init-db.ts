@@ -133,7 +133,7 @@ export async function checkDatabaseStatus() {
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
-      AND table_name IN ('stories', 'chapters', 'story_settings', 'origin_votes', 'origin_vote_totals', 'chapter_votes', 'chapter_vote_totals')
+      AND table_name IN ('stories', 'chapters', 'story_settings', 'origin_votes', 'origin_vote_totals', 'chapter_votes', 'chapter_vote_totals', 'ai_generation_history')
       ORDER BY table_name
     `);
 

@@ -343,7 +343,50 @@ ALTER TABLE chapter_vote_totals
 ADD CONSTRAINT chk_chapter_vote_totals_vote_count 
 CHECK (vote_count >= 0);
 
--- 10. 插入範例資料（可選）
+-- 10. 建立 AI 生成歷史記錄表
+CREATE TABLE IF NOT EXISTS ai_generation_history (
+    id SERIAL PRIMARY KEY,
+    generation_id VARCHAR(255) NOT NULL UNIQUE,
+    story_id UUID NOT NULL,
+    chapter_id INTEGER NOT NULL,
+    generation_type VARCHAR(50) NOT NULL DEFAULT 'chapter',
+    input_data JSONB,
+    output_data JSONB,
+    processing_time INTEGER DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- 外鍵約束
+    CONSTRAINT fk_ai_generation_history_story_id 
+        FOREIGN KEY (story_id) 
+        REFERENCES stories(story_id) 
+        ON DELETE CASCADE,
+    
+    CONSTRAINT fk_ai_generation_history_chapter_id 
+        FOREIGN KEY (chapter_id) 
+        REFERENCES chapters(chapter_id) 
+        ON DELETE CASCADE,
+    
+    -- 檢查約束
+    CONSTRAINT chk_ai_generation_history_type 
+        CHECK (generation_type IN ('chapter', 'continuation', 'branch')),
+    
+    CONSTRAINT chk_ai_generation_history_status 
+        CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+    
+    CONSTRAINT chk_ai_generation_history_processing_time 
+        CHECK (processing_time >= 0)
+);
+
+-- 10.1 建立 AI 生成歷史記錄表索引
+CREATE INDEX IF NOT EXISTS idx_ai_generation_history_story_id ON ai_generation_history(story_id);
+CREATE INDEX IF NOT EXISTS idx_ai_generation_history_chapter_id ON ai_generation_history(chapter_id);
+CREATE INDEX IF NOT EXISTS idx_ai_generation_history_generation_id ON ai_generation_history(generation_id);
+CREATE INDEX IF NOT EXISTS idx_ai_generation_history_status ON ai_generation_history(status);
+CREATE INDEX IF NOT EXISTS idx_ai_generation_history_created_at ON ai_generation_history(created_at);
+
+-- 11. 插入範例資料（可選）
 -- 建立一個範例故事
 INSERT INTO stories (story_serial, title, status, origin_voting_start_date) 
 VALUES ('A00001', '測試故事', '投票中', NOW())

@@ -31,7 +31,7 @@ export async function GET(
       paramIndex++;
     }
 
-    sql += ` ORDER BY c.chapter_number`;
+    sql += ` ORDER BY c.chapter_number DESC`;
 
     const result = await query(sql, queryParams);
 
