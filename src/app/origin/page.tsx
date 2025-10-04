@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePageSwipe, useStepSwipe, useCardSwipe } from '@/types/useSwipe';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 export default function Origin() {
   const router = useRouter();
@@ -97,7 +97,7 @@ export default function Origin() {
   // 初始化投票者會話 ID
   useEffect(() => {
     if (!voterSession) {
-      setVoterSession(uuidv4());
+      setVoterSession(randomUUID());
     }
   }, [voterSession]);
 

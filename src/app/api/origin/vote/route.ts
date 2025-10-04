@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, transaction } from '@/lib/db';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 // 獲取客戶端 IP 地址
 function getClientIP(request: NextRequest): string {

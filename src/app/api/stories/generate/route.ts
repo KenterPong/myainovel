@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, transaction } from '@/lib/db';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 // OpenAI API 設定
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -109,7 +109,7 @@ function parseAIResponse(aiResponse: string) {
 
 // 儲存故事到資料庫
 async function saveStoryToDatabase(storyData: any, genre: string, background: string, theme: string) {
-  const storyId = uuidv4();
+  const storyId = randomUUID();
   const now = new Date().toISOString();
 
   return await transaction(async (client) => {
@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
 
     // 故事生成成功後，清空投票記錄開始新一輪投票
     try {
-      const clearResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/origin/clear-votes`, {
+      const clearResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/origin/clear-votes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

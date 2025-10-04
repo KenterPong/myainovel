@@ -51,14 +51,11 @@ export function VoteOption({
         )}
       </div>
 
-      {/* 選項內容 */}
+      {/* 選項內容 - 簡化顯示 */}
       <div className="mb-2">
-        <h4 className="font-medium text-gray-900 mb-1">
+        <h4 className="font-medium text-gray-900">
           {option.content}
         </h4>
-        <p className="text-sm text-gray-600">
-          {option.description}
-        </p>
       </div>
 
       {/* 進度條 */}

@@ -52,7 +52,7 @@ export function useChapterVoting({ storyId, chapterId, enabled = true }: UseChap
         throw new Error(data.message || '獲取投票統計失敗');
       }
 
-      setVoteStats(data.data);
+      setVoteStats(data.data as VoteStats);
     } catch (error) {
       console.error('獲取投票統計失敗:', error);
       setError(error instanceof Error ? error.message : '獲取投票統計失敗');
@@ -100,8 +100,11 @@ export function useChapterVoting({ storyId, chapterId, enabled = true }: UseChap
         voteCounts: data.data.voteCounts,
         totalVotes: data.data.totalVotes,
         userVoted: data.data.userVoted,
+        userChoice: optionId, // 立即設置用戶選擇
         thresholdReached: data.data.thresholdReached,
-        triggerGeneration: data.data.triggerGeneration
+        triggerGeneration: data.data.triggerGeneration,
+        votingStatus: data.data.thresholdReached ? '投票截止' : '已投票', // 立即更新投票狀態
+        isVotingActive: !data.data.thresholdReached // 如果達到門檻則停止投票
       } : null);
 
       return data;

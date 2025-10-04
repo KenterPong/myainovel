@@ -13,9 +13,10 @@ export interface ChapterInfo {
   full_text: string;
   summary: string;
   tags: string[];
-  voting_status: '進行中' | '已截止' | '已生成';
+  voting_status: '投票中' | '已投票' | '投票截止';
   voting_deadline?: string;
   user_choice?: string;
+  cooldown_until?: string;
   previous_summary_context?: string;
   created_at: string;
 }
@@ -39,7 +40,7 @@ export interface ChapterListItem {
   chapter_number: string;
   title: string;
   summary: string;
-  voting_status: '進行中' | '已截止' | '已生成';
+  voting_status: '投票中' | '已投票' | '投票截止';
   created_at: string;
 }
 
@@ -61,10 +62,11 @@ export interface UpdateChapterRequest {
   full_text?: string;
   summary?: string;
   tags?: string[];
-  voting_status?: '進行中' | '已截止' | '已生成';
+  voting_status?: '投票中' | '已投票' | '投票截止';
   voting_options?: ChapterVotingOptions;
   voting_deadline?: string;
   user_choice?: string;
+  cooldown_until?: string;
 }
 
 // 章節列表回應

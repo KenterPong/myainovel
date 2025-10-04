@@ -42,8 +42,8 @@ export function getOriginTags(originVoting: any): string[] {
   // 獲取得票最高的選項
   const getTopOption = (category: any) => {
     if (!category || typeof category !== 'object') return null;
-    return Object.entries(category).reduce((max, [key, votes]) => {
-      return (votes as number) > (max.votes as number) ? { key, votes } : max;
+    return Object.entries(category).reduce((max: { key: string | null; votes: number }, [key, votes]) => {
+      return (votes as number) > max.votes ? { key, votes: votes as number } : max;
     }, { key: null, votes: 0 });
   };
 

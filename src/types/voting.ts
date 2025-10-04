@@ -13,8 +13,9 @@ export interface VotingOption {
 // 投票統計介面
 export interface VoteStats {
   chapterId: number;
-  votingStatus: '進行中' | '已截止' | '已生成';
+  votingStatus: '投票中' | '已投票' | '投票截止';
   votingDeadline?: string;
+  cooldownUntil?: string;
   voteCounts: {
     A: number;
     B: number;

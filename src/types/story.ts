@@ -38,7 +38,7 @@ export interface Chapter {
     deadline?: string;
   };
   voting_deadline?: string;
-  voting_status: '進行中' | '已截止' | '已生成';
+  voting_status: '投票中' | '已投票' | '投票截止';
   user_choice?: string;
   previous_summary_context?: string;
   created_at: string;
@@ -69,7 +69,7 @@ export interface StoryWithChapter {
     full_text: string;
     summary: string;
     tags: string[];
-    voting_status: '進行中' | '已截止' | '已生成';
+    voting_status: '投票中' | '已投票' | '投票截止';
     voting_deadline?: string;
     voting_options?: {
       options: Array<{

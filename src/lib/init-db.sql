@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS chapters (
     tags JSONB,
     voting_options JSONB,
     voting_deadline TIMESTAMP WITH TIME ZONE,
-    voting_status VARCHAR(20) DEFAULT '進行中',
+    voting_status VARCHAR(20) DEFAULT '投票中',
     user_choice VARCHAR(255),
     previous_summary_context TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -124,7 +124,7 @@ CHECK (status IN ('投票中', '撰寫中', '已完結'));
 -- 確保章節投票狀態是有效值
 ALTER TABLE chapters 
 ADD CONSTRAINT chk_chapters_voting_status 
-CHECK (voting_status IN ('進行中', '已截止', '已生成'));
+CHECK (voting_status IN ('投票中', '已投票', '投票截止'));
 
 -- 確保故事設定類型是有效值
 ALTER TABLE story_settings 

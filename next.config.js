@@ -16,6 +16,7 @@ const nextConfig = {
     optimizeCss: true,
   },
   
+  
   // 重定向設定
   async redirects() {
     return [
