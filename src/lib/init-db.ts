@@ -133,7 +133,7 @@ export async function checkDatabaseStatus() {
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
-      AND table_name IN ('stories', 'chapters', 'story_settings')
+      AND table_name IN ('stories', 'chapters', 'story_settings', 'origin_votes', 'origin_vote_totals', 'chapter_votes', 'chapter_vote_totals')
       ORDER BY table_name
     `);
 
@@ -166,6 +166,10 @@ export async function resetDatabase() {
     console.log('🔄 重置資料庫...');
     
     // 刪除所有資料表（會自動處理外鍵約束）
+    await query('DROP TABLE IF EXISTS chapter_vote_totals CASCADE');
+    await query('DROP TABLE IF EXISTS chapter_votes CASCADE');
+    await query('DROP TABLE IF EXISTS origin_vote_totals CASCADE');
+    await query('DROP TABLE IF EXISTS origin_votes CASCADE');
     await query('DROP TABLE IF EXISTS story_settings CASCADE');
     await query('DROP TABLE IF EXISTS chapters CASCADE');
     await query('DROP TABLE IF EXISTS stories CASCADE');

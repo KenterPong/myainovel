@@ -1,8 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query, transaction } from '@/lib/db';
+import { v4 as uuidv4 } from 'uuid';
+
+// 獲取客戶端 IP 地址
+function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const realIP = request.headers.get('x-real-ip');
+  
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  
+  if (realIP) {
+    return realIP;
+  }
+  
+  return '127.0.0.1'; // 預設值
+}
+
+// 獲取環境變數設定
+const CHAPTER_VOTING_THRESHOLD = parseInt(process.env.NEXT_PUBLIC_CHAPTER_VOTING_THRESHOLD || '100');
+const CHAPTER_VOTING_DURATION_HOURS = parseInt(process.env.NEXT_PUBLIC_CHAPTER_VOTING_DURATION_HOURS || '24');
+const CHAPTER_VOTING_COOLDOWN_HOURS = parseInt(process.env.NEXT_PUBLIC_CHAPTER_VOTING_COOLDOWN_HOURS || '24');
+
+// 檢查投票限制（同一 IP 和會話組合只能對同一章節投票一次）
+async function checkVoteLimit(chapterId: string, voterIP: string, voterSession: string): Promise<boolean> {
+  try {
+    const result = await query(`
+      SELECT COUNT(*) as vote_count
+      FROM chapter_votes 
+      WHERE chapter_id = $1 
+        AND voter_ip = $2 
+        AND voter_session = $3
+    `, [chapterId, voterIP, voterSession]);
+    
+    return parseInt(result.rows[0].vote_count) === 0;
+  } catch (error) {
+    console.error('檢查投票限制錯誤:', error);
+    return false;
+  }
+}
+
+// 檢查投票是否已達到門檻
+async function checkVotingThreshold(chapterId: string): Promise<{
+  voteCounts: { A: number; B: number; C: number };
+  totalVotes: number;
+  thresholdReached: boolean;
+  triggerGeneration: boolean;
+}> {
+  try {
+    const result = await query(`
+      SELECT option_id, vote_count
+      FROM chapter_vote_totals
+      WHERE chapter_id = $1
+      ORDER BY vote_count DESC
+    `, [chapterId]);
+    
+    const voteCounts = { A: 0, B: 0, C: 0 };
+    let totalVotes = 0;
+    
+    result.rows.forEach(row => {
+      if (row.option_id && typeof row.vote_count === 'number') {
+        voteCounts[row.option_id as keyof typeof voteCounts] = row.vote_count;
+        totalVotes += row.vote_count;
+      }
+    });
+    
+    // 檢查是否達到門檻
+    const maxVotes = Math.max(voteCounts.A, voteCounts.B, voteCounts.C);
+    const thresholdReached = maxVotes >= CHAPTER_VOTING_THRESHOLD;
+    const triggerGeneration = thresholdReached;
+    
+    return {
+      voteCounts,
+      totalVotes,
+      thresholdReached,
+      triggerGeneration
+    };
+  } catch (error) {
+    console.error('檢查投票門檻錯誤:', error);
+    return {
+      voteCounts: { A: 0, B: 0, C: 0 },
+      totalVotes: 0,
+      thresholdReached: false,
+      triggerGeneration: false
+    };
+  }
+}
 
 /**
- * POST /api/stories/[id]/chapters/[chapterId]/vote - 投票
+ * POST /api/stories/[id]/chapters/[chapterId]/vote - 提交章節投票
  */
 export async function POST(
   request: NextRequest,
@@ -12,18 +99,31 @@ export async function POST(
     const storyId = params.id;
     const chapterId = params.chapterId;
     const body = await request.json();
-    const { option_id } = body;
+    const { optionId, voterSession } = body;
 
-    if (!option_id) {
+    // 驗證必要參數
+    if (!optionId || !voterSession) {
       return NextResponse.json({ 
         success: false, 
-        message: '請選擇投票選項' 
+        message: '缺少必要參數' 
       }, { status: 400 });
     }
 
+    // 驗證選項 ID
+    if (!['A', 'B', 'C'].includes(optionId)) {
+      return NextResponse.json({ 
+        success: false, 
+        message: '無效的投票選項' 
+      }, { status: 400 });
+    }
+
+    // 獲取客戶端 IP
+    const voterIP = getClientIP(request);
+    const userAgent = request.headers.get('user-agent') || '';
+
     // 檢查章節是否存在且投票進行中
     const chapterResult = await query(`
-      SELECT voting_options, voting_status, voting_deadline
+      SELECT voting_status, voting_deadline
       FROM chapters 
       WHERE chapter_id = $1 AND story_id = $2
     `, [chapterId, storyId]);
@@ -52,50 +152,49 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // 更新投票選項
-    const votingOptions = chapter.voting_options;
-    if (!votingOptions || !votingOptions.options) {
-      return NextResponse.json({ 
-        success: false, 
-        message: '投票選項不存在' 
-      }, { status: 400 });
+    // 檢查投票限制
+    const canVote = await checkVoteLimit(chapterId, voterIP, voterSession);
+    if (!canVote) {
+      return NextResponse.json({
+        success: false,
+        message: '您已經對這個章節投過票了'
+      }, { status: 429 });
     }
 
-    // 找到對應的選項並增加票數
-    const updatedOptions = {
-      ...votingOptions,
-      options: votingOptions.options.map((option: any) => {
-        if (option.id === option_id) {
-          return { ...option, votes: (option.votes || 0) + 1 };
-        }
-        return option;
-      }),
-      total_votes: (votingOptions.total_votes || 0) + 1
-    };
+    // 提交投票
+    await transaction(async (client) => {
+      // 插入投票記錄
+      await client.query(`
+        INSERT INTO chapter_votes (
+          chapter_id, story_id, voter_ip, voter_session, 
+          option_id, voted_at, user_agent
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [
+        chapterId, storyId, voterIP, voterSession,
+        optionId, new Date(), userAgent
+      ]);
+    });
 
-    // 檢查是否達到自動生成條件
-    const maxVotes = Math.max(...updatedOptions.options.map((opt: any) => opt.votes));
-    const totalVotes = updatedOptions.total_votes;
-    const shouldAutoGenerate = maxVotes >= 100 || (totalVotes >= 100 && chapter.voting_deadline && new Date() >= new Date(chapter.voting_deadline));
-
-    // 更新章節投票資料
-    await query(`
-      UPDATE chapters 
-      SET 
-        voting_options = $1,
-        voting_status = $2
-      WHERE chapter_id = $3
-    `, [
-      JSON.stringify(updatedOptions),
-      shouldAutoGenerate ? '已生成' : '進行中',
-      chapterId
-    ]);
+    // 檢查投票門檻
+    const thresholdResult = await checkVotingThreshold(chapterId);
+    
+    // 如果達到門檻，更新章節狀態
+    if (thresholdResult.triggerGeneration) {
+      await query(`
+        UPDATE chapters 
+        SET voting_status = '已生成'
+        WHERE chapter_id = $1
+      `, [chapterId]);
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        voting_options: updatedOptions,
-        should_auto_generate: shouldAutoGenerate
+        voteCounts: thresholdResult.voteCounts,
+        totalVotes: thresholdResult.totalVotes,
+        userVoted: true,
+        thresholdReached: thresholdResult.thresholdReached,
+        triggerGeneration: thresholdResult.triggerGeneration
       },
       message: '投票成功'
     });
@@ -110,7 +209,7 @@ export async function POST(
 }
 
 /**
- * GET /api/stories/[id]/chapters/[chapterId]/vote - 取得投票狀態
+ * GET /api/stories/[id]/chapters/[chapterId]/vote - 取得章節投票統計
  */
 export async function GET(
   request: NextRequest,
@@ -119,38 +218,66 @@ export async function GET(
   try {
     const storyId = params.id;
     const chapterId = params.chapterId;
+    const voterIP = getClientIP(request);
+    const voterSession = request.headers.get('x-session-id') || '';
 
-    const result = await query(`
-      SELECT voting_options, voting_status, voting_deadline
+    // 檢查章節是否存在
+    const chapterResult = await query(`
+      SELECT voting_status, voting_deadline, voting_options
       FROM chapters 
       WHERE chapter_id = $1 AND story_id = $2
     `, [chapterId, storyId]);
 
-    if (result.rows.length === 0) {
+    if (chapterResult.rows.length === 0) {
       return NextResponse.json({ 
         success: false, 
         message: '章節不存在' 
       }, { status: 404 });
     }
 
-    const chapter = result.rows[0];
-    const votingOptions = chapter.voting_options;
+    const chapter = chapterResult.rows[0];
+
+    // 獲取投票統計
+    const thresholdResult = await checkVotingThreshold(chapterId);
+    
+    // 檢查用戶是否已投票
+    const userVoteResult = await query(`
+      SELECT option_id
+      FROM chapter_votes 
+      WHERE chapter_id = $1 
+        AND voter_ip = $2 
+        AND voter_session = $3
+    `, [chapterId, voterIP, voterSession]);
+
+    const userVoted = userVoteResult.rows.length > 0;
+    const userChoice = userVoted ? userVoteResult.rows[0].option_id : undefined;
+
+    // 檢查投票是否仍在進行中
+    const now = new Date();
+    const isVotingActive = chapter.voting_status === '進行中' && 
+      (!chapter.voting_deadline || now <= new Date(chapter.voting_deadline));
 
     return NextResponse.json({
       success: true,
       data: {
-        voting_options: votingOptions,
-        voting_status: chapter.voting_status,
-        voting_deadline: chapter.voting_deadline,
-        is_voting_active: chapter.voting_status === '進行中' && 
-          (!chapter.voting_deadline || new Date() <= new Date(chapter.voting_deadline))
+        chapterId: parseInt(chapterId),
+        votingStatus: chapter.voting_status,
+        votingDeadline: chapter.voting_deadline,
+        voteCounts: thresholdResult.voteCounts,
+        totalVotes: thresholdResult.totalVotes,
+        userVoted,
+        userChoice,
+        threshold: CHAPTER_VOTING_THRESHOLD,
+        thresholdReached: thresholdResult.thresholdReached,
+        triggerGeneration: thresholdResult.triggerGeneration,
+        isVotingActive
       }
     });
   } catch (error) {
-    console.error('取得投票狀態錯誤:', error);
+    console.error('取得投票統計錯誤:', error);
     return NextResponse.json({ 
       success: false, 
-      message: '取得投票狀態失敗',
+      message: '取得投票統計失敗',
       error: error instanceof Error ? error.message : '未知錯誤'
     }, { status: 500 });
   }

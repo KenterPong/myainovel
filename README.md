@@ -477,6 +477,32 @@ AI 生成的 JSON 結構會自動對應到以下資料庫欄位：
 | `vote_count` | `INTEGER` | **票數統計** | 即時更新，用於門檻檢查 |
 | `last_updated` | `TIMESTAMP WITH TIME ZONE` | **最後更新時間** | 追蹤統計更新 |
 
+##### 6. `chapter_votes` (章節投票記錄表)
+記錄讀者對章節投票選項的投票行為，用於防重複投票和投票統計。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `vote_id` | `UUID` | **主鍵**：每個投票記錄的唯一 ID | |
+| `chapter_id` | `INTEGER` | **外鍵**：指向所屬的章節 | 確保投票歸屬 |
+| `story_id` | `UUID` | **外鍵**：指向所屬的故事 | 確保投票歸屬 |
+| `voter_ip` | `VARCHAR(45)` | **投票者 IP 地址** | 用於防重複投票 |
+| `voter_session` | `VARCHAR(255)` | **投票者會話 ID** | 追蹤投票行為 |
+| `option_id` | `VARCHAR(10)` | **投票選項** | 'A', 'B', 'C' |
+| `voted_at` | `TIMESTAMP WITH TIME ZONE` | **投票時間** | 用於時間限制檢查 |
+| `user_agent` | `TEXT` | **瀏覽器資訊** | 可選，用於分析 |
+
+##### 7. `chapter_vote_totals` (章節投票統計表)
+即時統計各章節投票選項的票數，用於快速查詢和門檻檢查。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `total_id` | `SERIAL` | 主鍵 | |
+| `chapter_id` | `INTEGER` | **外鍵**：指向所屬的章節 | 確保統計歸屬 |
+| `story_id` | `UUID` | **外鍵**：指向所屬的故事 | 確保統計歸屬 |
+| `option_id` | `VARCHAR(10)` | **投票選項** | 'A', 'B', 'C' |
+| `vote_count` | `INTEGER` | **票數統計** | 即時更新，用於門檻檢查 |
+| `last_updated` | `TIMESTAMP WITH TIME ZONE` | **最後更新時間** | 追蹤統計更新 |
+
 #### 資料表關聯設計
 
 ```
@@ -487,12 +513,20 @@ stories (1) ←→ (N) chapters
     (1) ←→ (N) origin_votes
     ↓
     (1) ←→ (N) origin_vote_totals
+
+chapters (1) ←→ (N) chapter_votes
+    ↓
+    (1) ←→ (N) chapter_vote_totals
 ```
 
 - **`chapters.story_id`** → `stories.story_id` (外鍵)
 - **`story_settings.story_id`** → `stories.story_id` (外鍵)
 - **`origin_votes.story_id`** → `stories.story_id` (外鍵)
 - **`origin_vote_totals.story_id`** → `stories.story_id` (外鍵)
+- **`chapter_votes.chapter_id`** → `chapters.chapter_id` (外鍵)
+- **`chapter_votes.story_id`** → `stories.story_id` (外鍵)
+- **`chapter_vote_totals.chapter_id`** → `chapters.chapter_id` (外鍵)
+- **`chapter_vote_totals.story_id`** → `stories.story_id` (外鍵)
 
 #### JSONB 欄位格式範例
 
@@ -625,9 +659,14 @@ stories (1) ←→ (N) chapters
 
 ##### 投票 API 端點
 
+**故事起源投票**：
 - **POST `/api/origin/vote`**：提交投票
 - **GET `/api/origin/vote?storyId=xxx`**：獲取投票統計
 - **POST `/api/origin/clear-votes`**：清空投票記錄（內部使用）
+
+**章節投票**：
+- **POST `/api/stories/[id]/chapters/[chapterId]/vote`**：提交章節投票
+- **GET `/api/stories/[id]/chapters/[chapterId]/vote`**：獲取章節投票統計
 
 ##### 環境變數設定
 
@@ -638,6 +677,9 @@ stories (1) ←→ (N) chapters
 | `NEXT_PUBLIC_VOTING_THRESHOLD` | 100 | 每個分類達到此票數才觸發 AI 生成 |
 | `NEXT_PUBLIC_VOTING_DURATION_DAYS` | 7 | 投票活動持續天數 |
 | `NEXT_PUBLIC_VOTING_COOLDOWN_HOURS` | 24 | 同一 IP 投票冷卻時間（小時） |
+| `NEXT_PUBLIC_CHAPTER_VOTING_THRESHOLD` | 100 | 章節投票選項達到此票數才觸發 AI 生成 |
+| `NEXT_PUBLIC_CHAPTER_VOTING_DURATION_HOURS` | 24 | 章節投票持續時間（小時） |
+| `NEXT_PUBLIC_CHAPTER_VOTING_COOLDOWN_HOURS` | 24 | 章節投票冷卻時間（小時） |
 
 **設定位置**：在 `.env.local` 檔案中修改這些變數值即可調整投票規則。
 
@@ -651,7 +693,7 @@ stories (1) ←→ (N) chapters
    - 例：`["魔法學院", "校園生活", "考試挑戰"]`
 
 2. **投票選項生成**：
-   - AI 根據章節結尾自動生成 4 個選項供讀者投票
+   - AI 根據章節結尾自動生成 3 個選項供讀者投票
    - 每個選項包含內容、描述和初始票數（0票）
    - 儲存在 `voting_options` JSONB 欄位中
 
@@ -659,6 +701,14 @@ stories (1) ←→ (N) chapters
    - 設定投票截止時間（例：24小時後）
    - 讀者可選擇任一選項投票
    - 即時更新各選項票數
+   - 記錄投票行為到 `chapter_votes` 表
+   - 即時更新 `chapter_vote_totals` 統計表
+
+4. **防作弊機制**：
+   - **IP + Session 限制**：同一 IP 和會話組合在冷卻時間內只能投票一次
+   - **時間限制**：投票必須在有效期內進行
+   - **選項驗證**：確保投票選項有效（A、B、C）
+   - **重複投票檢查**：防止同一用戶重複投票
 
 ##### 自動生成下一章的條件
 
@@ -690,6 +740,103 @@ stories (1) ←→ (N) chapters
 - **違背處理**：如有違背，一律捨棄重新生成
 - **大綱同步更新**：每次生成後都要更新章節大綱，確保 AI 每次都能讀取完整上下文
 - **投票結果驗證**：生成新章節前驗證投票結果的合法性
+
+## 🏠 首頁系統
+
+### 首頁功能架構
+
+首頁是平台的核心入口，整合了故事展示、投票參與和用戶互動等主要功能。
+
+#### 主要功能區塊
+
+##### 1. 故事展示區域
+- **最新章節**：顯示所有故事的最新章節內容
+- **故事卡片**：包含故事標題、章節資訊、投票狀態
+- **互動統計**：顯示點讚、評論、分享數量
+
+##### 2. 投票系統整合
+- **故事起源投票**：讀者可參與故事基本設定的投票
+- **章節投票**：讀者可對正在投票的章節進行投票
+- **即時統計**：顯示各選項的即時票數和百分比
+- **投票倒數**：顯示投票截止時間倒數
+- **投票結果**：已截止的投票顯示最終結果
+
+##### 3. 用戶體驗優化
+- **響應式設計**：支援手機版和桌面版
+- **載入狀態**：提供良好的載入體驗
+- **錯誤處理**：完善的錯誤提示和重試機制
+- **滑動操作**：支援手勢滑動切換頁面
+
+#### 資料整合架構
+
+##### API 端點整合
+- `GET /api/stories` - 獲取故事列表
+- `GET /api/stories/[id]` - 獲取故事詳情
+- `GET /api/stories/[id]/chapters` - 獲取章節列表
+- `GET /api/origin/vote?storyId=xxx` - 獲取故事起源投票統計
+- `GET /api/stories/[id]/chapters/[chapterId]/vote` - 獲取章節投票統計
+
+##### 資料流程
+1. **首頁載入**：獲取所有故事的基本資訊
+2. **章節載入**：為每個故事獲取最新章節
+3. **投票狀態**：檢查故事起源和章節投票狀態
+4. **即時更新**：定期更新投票統計和狀態
+
+#### 技術實作
+
+##### 自定義 Hooks
+- `useHomeData` - 首頁資料獲取和管理
+- `useOriginVoting` - 故事起源投票狀態管理
+- `useChapterVoting` - 章節投票功能
+- `useVotePolling` - 投票統計輪詢
+
+##### 組件架構
+- `StoryCard` - 故事卡片組件
+- `OriginVotingSection` - 故事起源投票區域
+- `ChapterVotingSection` - 章節投票區域
+- `VoteOption` - 投票選項組件
+- `LoadingState` - 載入狀態組件
+- `ErrorState` - 錯誤狀態組件
+
+##### 型別定義
+```typescript
+interface StoryWithChapter {
+  story_id: string;
+  title: string;
+  status: '投票中' | '撰寫中' | '已完結';
+  current_chapter: {
+    chapter_id: number;
+    title: string;
+    voting_status: '進行中' | '已截止' | '已生成';
+    voting_options?: VotingOption[];
+  };
+  origin_voting?: {
+    voteCounts: any;
+    allThresholdsReached: boolean;
+  };
+  chapter_voting?: {
+    voteCounts: { A: number; B: number; C: number };
+    totalVotes: number;
+  };
+}
+```
+
+#### 效能優化
+
+##### 資料快取
+- 使用 React Query 快取 API 資料
+- 實現智慧型資料更新策略
+- 避免不必要的 API 呼叫
+
+##### 載入優化
+- 分頁載入更多故事
+- 圖片懶載入
+- 虛擬滾動處理大量資料
+
+##### 用戶體驗
+- 載入狀態指示器
+- 錯誤重試機制
+- 響應式動畫效果
 
 ## 📄 授權
 

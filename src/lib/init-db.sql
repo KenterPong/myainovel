@@ -237,7 +237,113 @@ ALTER TABLE origin_vote_totals
 ADD CONSTRAINT chk_origin_vote_totals_vote_count 
 CHECK (vote_count >= 0);
 
--- 9. 插入範例資料（可選）
+-- 9. 建立章節投票相關資料表
+
+-- 9.1 建立 chapter_votes 表（章節投票記錄表）
+CREATE TABLE IF NOT EXISTS chapter_votes (
+    vote_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    chapter_id INTEGER NOT NULL,
+    story_id UUID NOT NULL,
+    voter_ip VARCHAR(45) NOT NULL,
+    voter_session VARCHAR(255) NOT NULL,
+    option_id VARCHAR(10) NOT NULL, -- A, B, C
+    voted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    user_agent TEXT,
+    
+    -- 外鍵約束
+    CONSTRAINT fk_chapter_votes_chapter_id 
+        FOREIGN KEY (chapter_id) 
+        REFERENCES chapters(chapter_id) 
+        ON DELETE CASCADE,
+    
+    CONSTRAINT fk_chapter_votes_story_id 
+        FOREIGN KEY (story_id) 
+        REFERENCES stories(story_id) 
+        ON DELETE CASCADE,
+    
+    -- 唯一約束：同一 IP 和會話組合只能對同一章節投票一次
+    CONSTRAINT uk_chapter_votes_ip_session_chapter 
+        UNIQUE (voter_ip, voter_session, chapter_id)
+);
+
+-- 9.2 建立 chapter_vote_totals 表（章節投票統計表）
+CREATE TABLE IF NOT EXISTS chapter_vote_totals (
+    total_id SERIAL PRIMARY KEY,
+    chapter_id INTEGER NOT NULL,
+    story_id UUID NOT NULL,
+    option_id VARCHAR(10) NOT NULL, -- A, B, C
+    vote_count INTEGER DEFAULT 0,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- 外鍵約束
+    CONSTRAINT fk_chapter_vote_totals_chapter_id 
+        FOREIGN KEY (chapter_id) 
+        REFERENCES chapters(chapter_id) 
+        ON DELETE CASCADE,
+    
+    CONSTRAINT fk_chapter_vote_totals_story_id 
+        FOREIGN KEY (story_id) 
+        REFERENCES stories(story_id) 
+        ON DELETE CASCADE,
+    
+    -- 唯一約束：每個章節的每個選項只能有一條統計記錄
+    CONSTRAINT uk_chapter_vote_totals_chapter_option 
+        UNIQUE (chapter_id, option_id)
+);
+
+-- 9.3 建立索引以提升查詢效能
+-- chapter_votes 表索引
+CREATE INDEX IF NOT EXISTS idx_chapter_votes_chapter_id ON chapter_votes(chapter_id);
+CREATE INDEX IF NOT EXISTS idx_chapter_votes_story_id ON chapter_votes(story_id);
+CREATE INDEX IF NOT EXISTS idx_chapter_votes_voter_ip ON chapter_votes(voter_ip);
+CREATE INDEX IF NOT EXISTS idx_chapter_votes_voted_at ON chapter_votes(voted_at);
+CREATE INDEX IF NOT EXISTS idx_chapter_votes_ip_session ON chapter_votes(voter_ip, voter_session);
+CREATE INDEX IF NOT EXISTS idx_chapter_votes_option_id ON chapter_votes(option_id);
+
+-- chapter_vote_totals 表索引
+CREATE INDEX IF NOT EXISTS idx_chapter_vote_totals_chapter_id ON chapter_vote_totals(chapter_id);
+CREATE INDEX IF NOT EXISTS idx_chapter_vote_totals_story_id ON chapter_vote_totals(story_id);
+CREATE INDEX IF NOT EXISTS idx_chapter_vote_totals_option_id ON chapter_vote_totals(option_id);
+CREATE INDEX IF NOT EXISTS idx_chapter_vote_totals_vote_count ON chapter_vote_totals(vote_count);
+
+-- 9.4 建立觸發器函數：自動更新章節投票統計
+CREATE OR REPLACE FUNCTION update_chapter_vote_totals()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 更新章節投票統計
+    INSERT INTO chapter_vote_totals (chapter_id, story_id, option_id, vote_count, last_updated)
+    VALUES (NEW.chapter_id, NEW.story_id, NEW.option_id, 1, NOW())
+    ON CONFLICT (chapter_id, option_id) 
+    DO UPDATE SET 
+        vote_count = chapter_vote_totals.vote_count + 1,
+        last_updated = NOW();
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 建立觸發器
+CREATE TRIGGER trigger_update_chapter_vote_totals
+    AFTER INSERT ON chapter_votes
+    FOR EACH ROW
+    EXECUTE FUNCTION update_chapter_vote_totals();
+
+-- 9.5 建立檢查約束
+-- 確保選項 ID 是有效值
+ALTER TABLE chapter_votes 
+ADD CONSTRAINT chk_chapter_votes_option_id 
+CHECK (option_id IN ('A', 'B', 'C'));
+
+ALTER TABLE chapter_vote_totals 
+ADD CONSTRAINT chk_chapter_vote_totals_option_id 
+CHECK (option_id IN ('A', 'B', 'C'));
+
+-- 確保投票計數不能為負數
+ALTER TABLE chapter_vote_totals 
+ADD CONSTRAINT chk_chapter_vote_totals_vote_count 
+CHECK (vote_count >= 0);
+
+-- 10. 插入範例資料（可選）
 -- 建立一個範例故事
 INSERT INTO stories (story_serial, title, status, origin_voting_start_date) 
 VALUES ('A00001', '測試故事', '投票中', NOW())
@@ -283,7 +389,7 @@ ON CONFLICT (story_id, setting_type) DO NOTHING;
 DO $$
 BEGIN
     RAISE NOTICE '✅ 資料庫初始化完成！';
-    RAISE NOTICE '📊 已建立資料表：stories, chapters, story_settings';
+    RAISE NOTICE '📊 已建立資料表：stories, chapters, story_settings, origin_votes, origin_vote_totals, chapter_votes, chapter_vote_totals';
     RAISE NOTICE '🔗 已建立外鍵關聯和索引';
     RAISE NOTICE '⚡ 已建立觸發器和約束條件';
     RAISE NOTICE '📝 已插入範例資料';
