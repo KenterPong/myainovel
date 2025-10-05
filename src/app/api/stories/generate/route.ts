@@ -118,13 +118,13 @@ async function saveStoryToDatabase(storyData: any, genre: string, background: st
     
     // 1. 建立故事主表記錄
     await client.query(
-      `INSERT INTO stories (story_id, story_serial, title, status, voting_result, created_at, origin_voting_start_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO stories (story_id, story_serial, title, status, voting_result, created_at, origin_voting_start_date, writing_start_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         storyId,
         storySerial,
         storyData.title,
-        '投票中',
+        '撰寫中', // 故事生成後立即進入撰寫階段
         JSON.stringify({
           genre: genre,
           background: background,
@@ -132,7 +132,8 @@ async function saveStoryToDatabase(storyData: any, genre: string, background: st
           selected_at: now
         }),
         now,
-        now
+        now,
+        now // 開始撰寫時間
       ]
     );
 
@@ -191,8 +192,81 @@ async function saveStoryToDatabase(storyData: any, genre: string, background: st
       );
     }
 
+    // 3. 創建第一章節
+    const chapterId = await createFirstChapter(client, storyId, storyData, genre, background, theme);
+
     return storyId;
   });
+}
+
+// 創建第一章節
+async function createFirstChapter(client: any, storyId: string, storyData: any, genre: string, background: string, theme: string) {
+  const now = new Date().toISOString();
+  const votingDeadline = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24小時後
+
+  // 獲取下一個章節 ID
+  const chapterIdResult = await client.query(`
+    SELECT COALESCE(MAX(chapter_id), 0) + 1 as next_id
+    FROM chapters
+  `);
+  
+  const newChapterId = chapterIdResult.rows[0].next_id;
+
+  // 生成第一章內容
+  const chapterContent = `在${background}的世界中，${genre}的力量無處不在。主角踏上了屬於自己的冒險旅程，在${theme}關係的陪伴下，開始了這段充滿挑戰的旅程。
+
+故事從一個平凡的早晨開始，但命運的齒輪已經開始轉動。主角將面臨什麼樣的考驗？又會遇到什麼樣的夥伴？這一切都將在接下來的冒險中揭曉。
+
+隨著情節的推進，讀者將見證主角的成長，感受${theme}關係的溫暖，體驗${genre}世界的奇幻魅力。每一個選擇都將影響故事的走向，每一個決定都將塑造主角的命運。
+
+準備好了嗎？讓我們一起踏上這段精彩的冒險之旅！`;
+
+  const chapterSummary = `故事開端：主角在${background}環境中開始冒險，${theme}關係成為故事核心，${genre}元素為世界增添奇幻色彩。`;
+
+  // 創建投票選項
+  const votingOptions = [
+    {
+      id: "A",
+      content: "勇敢面對未知的挑戰",
+      description: "主角選擇正面迎擊困難，展現勇氣和決心",
+      votes: 0
+    },
+    {
+      id: "B", 
+      content: "尋求可靠的夥伴幫助",
+      description: "主角決定尋找志同道合的夥伴，共同面對困境",
+      votes: 0
+    },
+    {
+      id: "C",
+      content: "先觀察環境再行動",
+      description: "主角選擇謹慎行事，先了解情況再做決定",
+      votes: 0
+    }
+  ];
+
+  // 建立章節記錄
+  await client.query(`
+    INSERT INTO chapters (
+      chapter_id, story_id, chapter_number, title, full_text, summary, 
+      tags, voting_options, voting_deadline, voting_status, created_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+  `, [
+    newChapterId,
+    storyId,
+    '001',
+    `第001章：故事開始`,
+    chapterContent,
+    chapterSummary,
+    JSON.stringify(['AI生成', '第一章', genre, background, theme]),
+    JSON.stringify({ options: votingOptions, total_votes: 0, deadline: votingDeadline }),
+    votingDeadline,
+    '投票中',
+    now
+  ]);
+
+  console.log('✅ 第一章節創建成功，章節ID:', newChapterId);
+  return newChapterId;
 }
 
 // 生成故事流水序號
@@ -344,7 +418,7 @@ export async function POST(request: NextRequest) {
       success: true,
       storyId,
       storyData,
-      message: '故事設定生成成功並已儲存到資料庫，投票記錄已清空'
+      message: '故事設定和第一章節生成成功並已儲存到資料庫，投票記錄已清空'
     });
 
   } catch (error) {

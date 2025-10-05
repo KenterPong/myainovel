@@ -15,7 +15,8 @@ export async function GET(request: NextRequest) {
         s.title as story_title,
         s.story_id,
         s.status as story_status,
-        s.created_at as story_created_at
+        s.created_at as story_created_at,
+        s.voting_result
       FROM chapters c
       JOIN stories s ON c.story_id = s.story_id
     `;

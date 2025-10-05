@@ -6,10 +6,12 @@ import { useState, useEffect } from 'react';
 import { StoryWithChapter, HomePageData } from '@/types/story';
 
 export function useHomeData() {
+  const [allChapters, setAllChapters] = useState<any[]>([]);
   const [chapters, setChapters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filteredStoryId, setFilteredStoryId] = useState<string | null>(null);
+  const [filteredTag, setFilteredTag] = useState<string | null>(null);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
 
   // 獲取所有章節，按生成時間由新到舊排序
@@ -79,6 +81,7 @@ export function useHomeData() {
         })
       );
 
+      setAllChapters(chaptersWithVoting);
       setChapters(chaptersWithVoting);
     } catch (error) {
       console.error('獲取章節資料失敗:', error);
@@ -97,7 +100,97 @@ export function useHomeData() {
   const filterByStory = (storyId: string | null) => {
     setFilteredStoryId(storyId);
     setCurrentChapterId(null); // 清除當前章節
+    if (storyId) {
+      // 如果選擇了故事，清除標籤篩選
+      setFilteredTag(null);
+    }
     fetchChapters(storyId || undefined);
+  };
+
+  // 篩選特定標籤的故事
+  const filterByTag = (tag: string | null) => {
+    setFilteredTag(tag);
+    setCurrentChapterId(null); // 清除當前章節
+    if (tag) {
+      // 如果選擇了標籤，清除故事篩選
+      setFilteredStoryId(null);
+    }
+    
+    // 應用標籤過濾
+    if (tag) {
+      const filteredChapters = allChapters.filter(chapter => {
+        const votingResult = chapter.voting_result;
+        let tags = [];
+        
+        if (votingResult) {
+          // 如果有投票結果，使用投票結果
+          if (votingResult.genre) tags.push(votingResult.genre);
+          if (votingResult.background) tags.push(votingResult.background);
+          if (votingResult.theme) tags.push(votingResult.theme);
+        } else {
+          // 如果沒有投票結果，從標題中解析類型
+          const title = chapter.story_title || '';
+          
+          // 故事類型映射
+          const genreMap = {
+            '科幻': '科幻',
+            '奇幻': '奇幻',
+            '懸疑': '懸疑',
+            '歷史': '歷史',
+            '都市': '都市',
+            '末日': '末日'
+          };
+          
+          // 故事背景映射
+          const backgroundMap = {
+            '校園': '校園',
+            '職場': '職場',
+            '古代': '古代',
+            '冒險': '冒險',
+            '超能力': '超能力',
+            '推理': '推理'
+          };
+          
+          // 故事主題映射
+          const themeMap = {
+            'B/G': 'B/G',
+            'B/B': 'B/B', 
+            'G/G': 'G/G',
+            'BL': 'B/B',
+            'GL': 'G/G',
+            'BG': 'B/G',
+            '其他': '其他'
+          };
+          
+          // 嘗試從標題中提取類型
+          for (const [key, value] of Object.entries(genreMap)) {
+            if (title.includes(key)) {
+              tags.push(value);
+              break;
+            }
+          }
+          
+          for (const [key, value] of Object.entries(backgroundMap)) {
+            if (title.includes(key)) {
+              tags.push(value);
+              break;
+            }
+          }
+          
+          for (const [key, value] of Object.entries(themeMap)) {
+            if (title.includes(key)) {
+              tags.push(value);
+              break;
+            }
+          }
+        }
+        
+        return tags.includes(tag);
+      });
+      setChapters(filteredChapters);
+    } else {
+      setChapters(allChapters);
+    }
   };
 
   // 跳轉到特定章節
@@ -126,15 +219,18 @@ export function useHomeData() {
     return () => clearInterval(interval);
   }, [filteredStoryId]);
 
+
   return {
     chapters,
     loading,
     error,
     refetch,
     filterByStory,
+    filterByTag,
     navigateToChapter,
     clearCurrentChapter,
     filteredStoryId,
+    filteredTag,
     currentChapterId
   };
 }

@@ -15,6 +15,7 @@ interface ChapterCardProps {
   onNewChapterGenerated?: () => void;
   onStoryTitleClick?: (storyId: string) => void;
   onChapterNavigate?: (storyId: string, chapterNumber: string) => void;
+  onTagClick?: (tag: string) => void;
   filteredStoryId?: string | null;
 }
 
@@ -25,6 +26,7 @@ export function StoryCard({
   onNewChapterGenerated,
   onStoryTitleClick,
   onChapterNavigate,
+  onTagClick,
   filteredStoryId
 }: ChapterCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -162,34 +164,109 @@ export function StoryCard({
       {/* 章節內容 */}
       <div className="p-6">
         <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
+          {/* 故事標題 */}
+          <div className="mb-2">
             <h2 
               className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-purple-600 transition-colors"
               onClick={() => onStoryTitleClick?.(chapter.story_id)}
             >
               {chapter.story_title}
             </h2>
-            {/* 故事起源標籤 */}
-            {chapter.origin_voting && (() => {
-              const originTags = getOriginTags(chapter.origin_voting);
-              return originTags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {originTags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              );
-            })()}
           </div>
+          
+          {/* 故事標籤和投票狀態 */}
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-medium text-gray-800">
-              第 {chapter.chapter_number} 章: {chapter.title}
-            </h3>
+            {/* 故事類型標籤 - 左邊 */}
+            <div className="flex flex-wrap gap-1">
+              {(() => {
+                // 從 voting_result 中獲取故事的三個類型標籤
+                const votingResult = chapter.voting_result;
+                let tags = [];
+                
+                if (votingResult) {
+                  // 如果有投票結果，使用投票結果
+                  if (votingResult.genre) tags.push(votingResult.genre);
+                  if (votingResult.background) tags.push(votingResult.background);
+                  if (votingResult.theme) tags.push(votingResult.theme);
+                } else {
+                  // 如果沒有投票結果，嘗試從故事標題中解析類型
+                  const title = chapter.story_title || '';
+                  
+                  // 從標題中提取類型資訊（例如：「科幻職場BL的奇幻冒險」）
+                  // 科幻 -> 故事類型
+                  // 職場 -> 故事背景  
+                  // BL -> 故事主題
+                  
+                  // 故事類型映射
+                  const genreMap = {
+                    '科幻': '科幻',
+                    '奇幻': '奇幻',
+                    '懸疑': '懸疑',
+                    '歷史': '歷史',
+                    '都市': '都市',
+                    '末日': '末日'
+                  };
+                  
+                  // 故事背景映射
+                  const backgroundMap = {
+                    '校園': '校園',
+                    '職場': '職場',
+                    '古代': '古代',
+                    '冒險': '冒險',
+                    '超能力': '超能力',
+                    '推理': '推理'
+                  };
+                  
+                  // 故事主題映射
+                  const themeMap = {
+                    'B/G': 'B/G',
+                    'B/B': 'B/B', 
+                    'G/G': 'G/G',
+                    'BL': 'B/B',
+                    'GL': 'G/G',
+                    'BG': 'B/G',
+                    '其他': '其他'
+                  };
+                  
+                  // 嘗試從標題中提取類型
+                  for (const [key, value] of Object.entries(genreMap)) {
+                    if (title.includes(key)) {
+                      tags.push(value);
+                      break;
+                    }
+                  }
+                  
+                  for (const [key, value] of Object.entries(backgroundMap)) {
+                    if (title.includes(key)) {
+                      tags.push(value);
+                      break;
+                    }
+                  }
+                  
+                  for (const [key, value] of Object.entries(themeMap)) {
+                    if (title.includes(key)) {
+                      tags.push(value);
+                      break;
+                    }
+                  }
+                }
+                
+                return tags.map((tag, index) => (
+                  <button
+                    key={index}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTagClick?.(tag);
+                    }}
+                    className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 hover:text-green-800 transition-colors cursor-pointer"
+                  >
+                    {tag}
+                  </button>
+                ));
+              })()}
+            </div>
+            
+            {/* 投票狀態 - 右邊 */}
             <span className={`
               px-3 py-1 rounded-full text-sm font-medium
               ${localVotingStatus === '投票中' ? 'bg-purple-100 text-purple-800' :
@@ -199,6 +276,13 @@ export function StoryCard({
             `}>
               {localVotingStatus}
             </span>
+          </div>
+          
+          {/* 章節標題 */}
+          <div className="mb-2">
+            <h3 className="text-base font-medium text-gray-800">
+              {chapter.title}
+            </h3>
           </div>
           <div 
             className="text-gray-700 leading-relaxed cursor-pointer"

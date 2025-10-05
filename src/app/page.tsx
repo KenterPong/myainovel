@@ -14,7 +14,7 @@ export default function Home() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
   // 使用首頁資料 Hook
-  const { chapters, loading, error, refetch, filterByStory, navigateToChapter, clearCurrentChapter, filteredStoryId, currentChapterId } = useHomeData()
+  const { chapters, loading, error, refetch, filterByStory, navigateToChapter, clearCurrentChapter, filteredStoryId, currentChapterId, filterByTag, filteredTag } = useHomeData()
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null)
@@ -71,6 +71,17 @@ export default function Home() {
     }
   }
 
+  // 處理標籤點擊（篩選功能）
+  const handleTagClick = (tag: string) => {
+    if (filteredTag === tag) {
+      // 如果已經在篩選該標籤，則取消篩選
+      filterByTag(null)
+    } else {
+      // 篩選該標籤的故事
+      filterByTag(tag)
+    }
+  }
+
   // 處理章節導航
   const handleChapterNavigate = (storyId: string, chapterNumber: string) => {
     console.log('導航到章節:', { storyId, chapterNumber });
@@ -97,14 +108,17 @@ export default function Home() {
       )}
 
       {/* 篩選狀態提示 */}
-      {filteredStoryId && !currentChapterId && (
+      {(filteredStoryId || filteredTag) && !currentChapterId && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <span className="text-blue-700">
-              正在顯示特定故事的章節
+              {filteredStoryId ? '正在顯示特定故事的章節' : `正在顯示「${filteredTag}」標籤的故事`}
             </span>
             <button
-              onClick={() => filterByStory(null)}
+              onClick={() => {
+                if (filteredStoryId) filterByStory(null);
+                if (filteredTag) filterByTag(null);
+              }}
               className="text-blue-600 hover:text-blue-800 underline"
             >
               顯示所有章節
@@ -141,6 +155,7 @@ export default function Home() {
                     onNewChapterGenerated={handleNewChapterGenerated}
                     onStoryTitleClick={handleStoryTitleClick}
                     onChapterNavigate={handleChapterNavigate}
+                    onTagClick={handleTagClick}
                     filteredStoryId={filteredStoryId}
                   />
                 );
@@ -157,6 +172,7 @@ export default function Home() {
                 onNewChapterGenerated={handleNewChapterGenerated}
                 onStoryTitleClick={handleStoryTitleClick}
                 onChapterNavigate={handleChapterNavigate}
+                onTagClick={handleTagClick}
                 filteredStoryId={filteredStoryId}
               />
             ));

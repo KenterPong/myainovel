@@ -142,7 +142,7 @@ export function ChapterListModal({
                         <div>
                           <div className="flex items-center space-x-2">
                             <span className="font-medium text-gray-900">
-                              第{chapter.chapter_number}章
+                              {chapter.title}
                             </span>
                             {isCurrentChapter && (
                               <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full">
@@ -150,9 +150,6 @@ export function ChapterListModal({
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 truncate max-w-xs">
-                            {chapter.title}
-                          </p>
                         </div>
                       </div>
                       <div className="text-right">
