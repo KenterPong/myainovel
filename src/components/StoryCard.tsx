@@ -17,6 +17,7 @@ interface ChapterCardProps {
   onChapterNavigate?: (storyId: string, chapterNumber: string) => void;
   onTagClick?: (tag: string) => void;
   filteredStoryId?: string | null;
+  filteredTag?: string | null;
 }
 
 export function StoryCard({ 
@@ -27,7 +28,8 @@ export function StoryCard({
   onStoryTitleClick,
   onChapterNavigate,
   onTagClick,
-  filteredStoryId
+  filteredStoryId,
+  filteredTag
 }: ChapterCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [localVotingStatus, setLocalVotingStatus] = useState(chapter.voting_status);
@@ -251,18 +253,27 @@ export function StoryCard({
                   }
                 }
                 
-                return tags.map((tag, index) => (
-                  <button
-                    key={index}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTagClick?.(tag);
-                    }}
-                    className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 hover:text-green-800 transition-colors cursor-pointer"
-                  >
-                    {tag}
-                  </button>
-                ));
+                return tags.map((tag, index) => {
+                  // 檢查是否為當前選中的標籤
+                  const isSelected = filteredTag === tag;
+                  
+                  return (
+                    <button
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTagClick?.(tag);
+                      }}
+                      className={`px-2 py-1 text-xs rounded-full transition-colors cursor-pointer ${
+                        isSelected 
+                          ? 'bg-green-100 text-green-800 border-2 border-green-600 hover:bg-green-200' 
+                          : 'bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                });
               })()}
             </div>
             

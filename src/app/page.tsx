@@ -107,25 +107,6 @@ export default function Home() {
         />
       )}
 
-      {/* 篩選狀態提示 */}
-      {(filteredStoryId || filteredTag) && !currentChapterId && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-blue-700">
-              {filteredStoryId ? '正在顯示特定故事的章節' : `正在顯示「${filteredTag}」標籤的故事`}
-            </span>
-            <button
-              onClick={() => {
-                if (filteredStoryId) filterByStory(null);
-                if (filteredTag) filterByTag(null);
-              }}
-              className="text-blue-600 hover:text-blue-800 underline"
-            >
-              顯示所有章節
-            </button>
-          </div>
-        </div>
-      )}
 
 
       {/* 空資料狀態 */}
@@ -157,6 +138,7 @@ export default function Home() {
                     onChapterNavigate={handleChapterNavigate}
                     onTagClick={handleTagClick}
                     filteredStoryId={filteredStoryId}
+                    filteredTag={filteredTag}
                   />
                 );
               }
@@ -174,6 +156,7 @@ export default function Home() {
                 onChapterNavigate={handleChapterNavigate}
                 onTagClick={handleTagClick}
                 filteredStoryId={filteredStoryId}
+                filteredTag={filteredTag}
               />
             ));
           })()}
