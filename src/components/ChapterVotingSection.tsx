@@ -202,8 +202,8 @@ export function ChapterVotingSection({
         投票中 ({totalVotes}票) - 選擇故事發展方向
       </div>
 
-      {/* 簡化的投票選項 - 上下排列 */}
-        <div className="space-y-3">
+      {/* 投票選項 */}
+      <div className="space-y-3">
           {votingOptions.map((option) => {
             const voteCount = voteCounts[option.id as keyof typeof voteCounts] || 0;
             const isSelected = selectedOption === option.id || voteStats?.userChoice === option.id;
@@ -257,7 +257,7 @@ export function ChapterVotingSection({
               </div>
             );
           })}
-        </div>
+      </div>
 
       {/* 簡化的投票狀態資訊 */}
       {voteStats?.userVoted && (

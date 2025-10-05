@@ -1,10 +1,23 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useHomeData } from '@/lib/hooks/useHomeData'
 import NotificationPopup from './NotificationPopup'
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const { currentChapterId, clearCurrentChapter, filterByStory, filteredStoryId } = useHomeData()
+
+  // 處理首頁按鈕點擊
+  const handleHomeClick = (e: React.MouseEvent) => {
+    console.log('首頁按鈕被點擊', { currentChapterId, filteredStoryId })
+    // 總是執行清除操作，不管狀態如何
+    e.preventDefault()
+    console.log('清除章節和故事篩選，回到平台首頁')
+    
+    // 直接導航到首頁，強制重新載入
+    window.location.href = '/'
+  }
 
   const navigationItems = [
     { 
@@ -14,7 +27,8 @@ export default function BottomNav() {
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
         </svg>
-      )
+      ),
+      onClick: handleHomeClick
     },
     { 
       name: '起源', 
@@ -64,6 +78,8 @@ export default function BottomNav() {
       <div className="flex items-center justify-around h-full">
         {navigationItems.map((item) => {
           const isActive = pathname === item.href
+          // 首頁按鈕在單一章節視圖中應該保持可點擊狀態
+          const isHomeInChapterView = item.name === '首頁' && currentChapterId
           
           if (item.isPopup) {
             return (
@@ -77,13 +93,14 @@ export default function BottomNav() {
             <Link
               key={item.name}
               href={item.href!}
+              onClick={item.onClick}
               className={`flex items-center justify-center p-2 rounded-lg transition-colors ${
-                isActive
+                isActive || isHomeInChapterView
                   ? 'text-primary-700 bg-primary-100 font-medium'
                   : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <div className={`${isActive ? 'text-primary-700' : 'text-gray-500'}`}>
+              <div className={`${isActive || isHomeInChapterView ? 'text-primary-700' : 'text-gray-500'}`}>
                 {item.icon}
               </div>
             </Link>

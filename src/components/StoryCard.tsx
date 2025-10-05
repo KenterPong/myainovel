@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChapterVotingSection } from './ChapterVotingSection';
 import { ChapterNavigation } from './ChapterNavigation';
+import { ChapterListModal } from './ChapterListModal';
 import { getOriginTags } from '@/lib/utils/originTags';
 
 interface ChapterCardProps {
@@ -30,6 +31,9 @@ export function StoryCard({
   const [localVotingStatus, setLocalVotingStatus] = useState(chapter.voting_status);
   const [navigationInfo, setNavigationInfo] = useState<any>(null);
   const [navigationLoading, setNavigationLoading] = useState(false);
+  const [showChapterList, setShowChapterList] = useState(false);
+  const [storyChapters, setStoryChapters] = useState<any[]>([]);
+  const [chaptersLoading, setChaptersLoading] = useState(false);
 
   // 同步本地投票狀態
   useEffect(() => {
@@ -111,6 +115,48 @@ export function StoryCard({
     }
   };
 
+  // 獲取故事的所有章節
+  const fetchStoryChapters = async () => {
+    try {
+      setChaptersLoading(true);
+      const response = await fetch(`/api/stories/${chapter.story_id}/chapters`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStoryChapters(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('獲取章節列表失敗:', error);
+    } finally {
+      setChaptersLoading(false);
+    }
+  };
+
+  // 處理顯示章節列表
+  const handleShowChapterList = () => {
+    if (storyChapters.length === 0) {
+      fetchStoryChapters();
+    }
+    setShowChapterList(true);
+  };
+
+  // 處理章節選擇
+  const handleChapterSelect = (chapterId: number) => {
+    const selectedChapter = storyChapters.find(ch => ch.chapter_id === chapterId);
+    if (selectedChapter && onChapterNavigate) {
+      onChapterNavigate(chapter.story_id, selectedChapter.chapter_number);
+    }
+  };
+
+  // 處理返回首頁
+  const handleBackToHome = () => {
+    setShowChapterList(false);
+    if (onBackToHome) {
+      onBackToHome();
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
       {/* 章節內容 */}
@@ -186,35 +232,48 @@ export function StoryCard({
                 點擊收合
               </span>
             )}
+            
+            {/* 章節投票區域 - 只在展開時顯示 */}
+            {isExpanded && hasVotingOptions && (
+              <div className="mt-6">
+                <ChapterVotingSection
+                  storyId={chapter.story_id}
+                  chapterId={chapter.chapter_id}
+                  votingOptions={votingOptions}
+                  onVoteSuccess={onVoteSuccess}
+                  onVotingStatusChange={setLocalVotingStatus}
+                  isVotingActive={isVotingActive}
+                  onNewChapterGenerated={onNewChapterGenerated}
+                />
+              </div>
+            )}
           </div>
         </div>
-
-
-
-        {/* 章節投票區域 */}
-        {hasVotingOptions && (
-          <div className="mb-4">
-            <ChapterVotingSection
-              storyId={chapter.story_id}
-              chapterId={chapter.chapter_id}
-              votingOptions={votingOptions}
-              onVoteSuccess={onVoteSuccess}
-              onVotingStatusChange={setLocalVotingStatus}
-              isVotingActive={isVotingActive}
-              onNewChapterGenerated={onNewChapterGenerated}
-            />
-          </div>
-        )}
 
         {/* 章節導航區域 */}
         <ChapterNavigation
           storyId={chapter.story_id}
           currentChapterNumber={chapter.chapter_number}
           onNavigate={handleChapterNavigate}
+          onShowChapterList={handleShowChapterList}
           hasPrev={!!navigationInfo?.prevChapter}
           hasNext={!!navigationInfo?.nextChapter}
           loading={navigationLoading}
+          showChapterList={showChapterList}
         />
+
+        {/* 章節列表彈窗 */}
+        {showChapterList && (
+          <ChapterListModal
+            storyId={chapter.story_id}
+            storyTitle={chapter.story_title || '未知故事'}
+            chapters={storyChapters}
+            currentChapterId={chapter.chapter_id}
+            onChapterSelect={handleChapterSelect}
+            onClose={() => setShowChapterList(false)}
+            loading={chaptersLoading}
+          />
+        )}
 
       </div>
     </div>

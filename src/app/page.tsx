@@ -113,30 +113,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* 章節查看狀態提示 */}
-      {currentChapterId && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-green-700">
-              正在查看第 {currentChapterId} 章
-            </span>
-            <div className="space-x-2">
-              <button
-                onClick={clearCurrentChapter}
-                className="text-green-600 hover:text-green-800 underline"
-              >
-                返回章節列表
-              </button>
-              <button
-                onClick={() => filterByStory(null)}
-                className="text-green-600 hover:text-green-800 underline"
-              >
-                顯示所有章節
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 空資料狀態 */}
       {!loading && !error && chapters.length === 0 && (
