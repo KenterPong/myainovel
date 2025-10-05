@@ -16,6 +16,7 @@ interface ChapterCardProps {
   onStoryTitleClick?: (storyId: string) => void;
   onChapterNavigate?: (storyId: string, chapterNumber: string) => void;
   onTagClick?: (tag: string) => void;
+  onBackToHome?: () => void;
   filteredStoryId?: string | null;
   filteredTag?: string | null;
 }
@@ -28,6 +29,7 @@ export function StoryCard({
   onStoryTitleClick,
   onChapterNavigate,
   onTagClick,
+  onBackToHome,
   filteredStoryId,
   filteredTag
 }: ChapterCardProps) {

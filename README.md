@@ -912,14 +912,23 @@ interface VoteStatsResponse {
 - **故事篩選**：點擊故事標題可篩選該故事的所有章節
 - **互動統計**：顯示點讚、評論、分享數量
 
-##### 2. 投票系統整合
+##### 2. 熱門故事區域
+- **熱門故事列表**：顯示熱門故事，按故事生成時間由新到舊排序
+- **故事資訊**：包含故事標題、狀態（投票中/撰寫中/已完結）、總章數
+- **狀態標識**：
+  - 投票中：黃色圓點或時鐘圖標
+  - 撰寫中：藍色圓點或編輯圖標
+  - 已完結：綠色圓點或勾號圖標
+- **章數統計**：顯示該故事目前的總章節數
+
+##### 3. 投票系統整合
 - **故事起源投票**：讀者可參與故事基本設定的投票
 - **章節投票**：讀者可對正在投票的章節進行投票
 - **即時統計**：顯示各選項的即時票數和百分比
 - **投票倒數**：顯示投票截止時間倒數
 - **投票結果**：已截止的投票顯示最終結果
 
-##### 3. 用戶體驗優化
+##### 4. 用戶體驗優化
 - **響應式設計**：支援手機版和桌面版
 - **載入狀態**：提供良好的載入體驗
 - **錯誤處理**：完善的錯誤提示和重試機制
@@ -931,6 +940,16 @@ interface VoteStatsResponse {
 ```typescript
 interface HomePageData {
   stories: StoryWithChapter[];
+  popularStories: PopularStory[];
+}
+
+interface PopularStory {
+  story_id: string;
+  title: string;
+  status: '投票中' | '撰寫中' | '已完結';
+  total_chapters: number;
+  created_at: string;
+  last_updated: string;
 }
 
 interface StoryWithChapter {
@@ -975,15 +994,17 @@ interface StoryWithChapter {
 - `GET /api/stories` - 獲取故事列表
 - `GET /api/stories/[id]` - 獲取故事詳情
 - `GET /api/stories/[id]/chapters` - 獲取章節列表
+- `GET /api/stories/popular` - 獲取熱門故事列表（按生成時間排序）
 - `GET /api/origin/vote?storyId=xxx` - 獲取故事起源投票統計
 - `GET /api/stories/[id]/chapters/[chapterId]/vote` - 獲取章節投票統計
 
 ##### 資料流程
-1. **首頁載入**：獲取所有章節的基本資訊
+1. **首頁載入**：獲取所有章節的基本資訊和熱門故事列表
 2. **跨故事排序**：**所有章節混合**按 `created_at` 時間戳由新到舊排序
-3. **投票狀態**：檢查故事起源和章節投票狀態
-4. **即時更新**：定期更新投票統計和狀態
-5. **新章節置頂**：新生成的章節自動置頂，舊章節保持顯示
+3. **熱門故事排序**：按故事生成時間由新到舊排序
+4. **投票狀態**：檢查故事起源和章節投票狀態
+5. **即時更新**：定期更新投票統計和狀態
+6. **新章節置頂**：新生成的章節自動置頂，舊章節保持顯示
 
 ##### 章節排序策略
 - **首頁顯示**：跨故事按章節生成時間排序，可能出現不同故事章節穿插
@@ -1038,6 +1059,18 @@ export function useOriginVoting(storyId: string) {
   // 門檻檢查和觸發邏輯
 }
 
+###### 5. usePopularStories - 熱門故事管理
+```typescript
+export function usePopularStories() {
+  const [popularStories, setPopularStories] = useState<PopularStory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // 獲取熱門故事列表（按生成時間排序）
+  // 處理載入狀態和錯誤
+  // 提供重新載入功能
+}
+
 ##### 組件架構
 
 ###### 1. StoryCard - 故事卡片組件
@@ -1072,7 +1105,15 @@ interface VoteOptionProps {
 }
 ```
 
-###### 4. 狀態管理組件
+###### 4. PopularStoryCard - 熱門故事卡片組件
+```typescript
+interface PopularStoryCardProps {
+  story: PopularStory;
+  onViewStory?: (storyId: string) => void;
+}
+```
+
+###### 5. 狀態管理組件
 - `LoadingState` - 載入狀態組件
 - `ErrorState` - 錯誤狀態組件
 - `EmptyState` - 空資料狀態組件
@@ -1097,6 +1138,15 @@ interface StoryWithChapter {
     voteCounts: { A: number; B: number; C: number };
     totalVotes: number;
   };
+}
+
+interface PopularStory {
+  story_id: string;
+  title: string;
+  status: '投票中' | '撰寫中' | '已完結';
+  total_chapters: number;
+  created_at: string;
+  last_updated: string;
 }
 ```
 

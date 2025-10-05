@@ -3,22 +3,45 @@
  */
 
 import { useState, useEffect } from 'react';
-import { StoryWithChapter, HomePageData } from '@/types/story';
+import { StoryWithChapter, HomePageData, PopularStory } from '@/types/story';
 
 export function useHomeData() {
   const [allChapters, setAllChapters] = useState<any[]>([]);
   const [chapters, setChapters] = useState<any[]>([]);
+  const [popularStories, setPopularStories] = useState<PopularStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filteredStoryId, setFilteredStoryId] = useState<string | null>(null);
   const [filteredTag, setFilteredTag] = useState<string | null>(null);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
 
+  // 獲取熱門故事
+  const fetchPopularStories = async () => {
+    try {
+      const response = await fetch('/api/stories/popular');
+      if (!response.ok) {
+        throw new Error('獲取熱門故事失敗');
+      }
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        setPopularStories(data.data);
+      }
+    } catch (error) {
+      console.warn('獲取熱門故事失敗:', error);
+    }
+  };
+
   // 獲取所有章節，按生成時間由新到舊排序
   const fetchChapters = async (storyId?: string) => {
     try {
       setLoading(true);
       setError(null);
+
+      // 如果不是篩選特定故事，則同時獲取熱門故事
+      if (!storyId) {
+        await fetchPopularStories();
+      }
 
       // 構建 API URL
       const url = storyId ? `/api/chapters?storyId=${storyId}` : '/api/chapters';
@@ -222,6 +245,7 @@ export function useHomeData() {
 
   return {
     chapters,
+    popularStories,
     loading,
     error,
     refetch,

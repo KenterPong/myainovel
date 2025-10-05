@@ -1,116 +1,99 @@
 'use client'
-import { useState } from 'react'
+import { usePopularStories } from '@/lib/hooks/usePopularStories'
 
 export default function RightSidebar() {
-  const [followedStories, setFollowedStories] = useState<Set<string>>(new Set())
+  const { popularStories, loading: popularLoading, error: popularError } = usePopularStories()
 
-  const trendingTopics = [
-    { name: '#神秘師父', discussions: 1234, rank: 1 },
-    { name: '#星際探險', discussions: 856, rank: 2 },
-    { name: '#魔法考試', discussions: 743, rank: 3 },
-  ]
 
-  const recommendedStories = [
-    {
-      id: 'dragon-legend',
-      title: '#龍族傳說',
-      description: '奇幻冒險。傳說中',
-      type: '奇幻冒險',
-      status: '連載中'
-    },
-    {
-      id: 'time-traveler',
-      title: '#時空旅者',
-      description: '科幻懸疑。即將開始',
-      type: '科幻懸疑',
-      status: '即將開始'
-    },
-    {
-      id: 'campus-romance',
-      title: '#校園戀曲',
-      description: '青春愛情。連眼中',
-      type: '青春愛情',
-      status: '連載中'
-    },
-  ]
+  const handlePopularStoryClick = (storyId: string) => {
+    // 這裡可以添加點擊熱門故事後的處理邏輯
+    // 例如：導航到該故事、篩選該故事的章節等
+    console.log('點擊熱門故事:', storyId)
+  }
 
-  const handleFollow = (storyId: string) => {
-    setFollowedStories(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(storyId)) {
-        newSet.delete(storyId)
-      } else {
-        newSet.add(storyId)
-      }
-      return newSet
-    })
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case '投票中':
+        return <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+      case '撰寫中':
+        return <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+      case '已完結':
+        return <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+      default:
+        return <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+    }
   }
 
   return (
     <div className="w-full bg-gray-100 border-l border-gray-200 h-screen p-4 lg:p-6 sticky top-0 overflow-y-auto">
-      {/* 趨勢話題 */}
+      {/* 熱門故事 */}
       <div className="mb-6 lg:mb-8">
-        <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-3 lg:mb-4">趨勢話題</h3>
-        <div className="space-y-2 lg:space-y-3">
-          {trendingTopics.map((topic, index) => {
-            const isTop1 = topic.rank === 1
-            const isTop2 = topic.rank === 2
-            return (
-              <div key={index} className={`flex items-center justify-between p-2 lg:p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-all duration-200 ${
-                isTop1 
-                  ? 'bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 shadow-sm' 
-                  : isTop2 
-                  ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 shadow-sm'
-                  : 'bg-gray-50'
-              }`}>
-                <div className="flex items-center space-x-2">
-                  {isTop1 && (
-                    <span className="text-yellow-500 text-sm font-bold">🔥</span>
-                  )}
-                  {isTop2 && (
-                    <span className="text-orange-500 text-sm font-bold">⭐</span>
-                  )}
-                  <span className={`font-medium text-sm lg:text-base truncate ${
-                    isTop1 ? 'text-purple-800' : isTop2 ? 'text-orange-800' : 'text-gray-700'
-                  }`}>{topic.name}</span>
-                </div>
-                <span className={`text-xs lg:text-sm flex-shrink-0 ml-2 ${
-                  isTop1 ? 'text-purple-600 font-semibold' : isTop2 ? 'text-orange-600 font-semibold' : 'text-gray-500'
-                }`}>{topic.discussions} 討論</span>
+        <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-3 lg:mb-4">熱門故事</h3>
+        {popularLoading ? (
+          <div className="space-y-2 lg:space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-gray-50 rounded-lg p-2 lg:p-3 animate-pulse">
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
               </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* 推薦故事 */}
-      <div className="mb-6 lg:mb-8">
-        <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-3 lg:mb-4">推薦故事</h3>
-        <div className="space-y-3 lg:space-y-4">
-          {recommendedStories.map((story) => (
-            <div key={story.id} className="bg-white border border-gray-200 rounded-lg p-3 lg:p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-2">
-                <h4 className="font-medium text-gray-900 text-sm lg:text-base truncate">{story.title}</h4>
-                <button
-                  onClick={() => handleFollow(story.id)}
-                  className={`px-2 lg:px-3 py-1 text-xs rounded-full transition-colors flex-shrink-0 ml-2 ${
-                    followedStories.has(story.id)
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'bg-gray-100 text-gray-600 hover:bg-primary-100 hover:text-primary-700'
+            ))}
+          </div>
+        ) : popularError ? (
+          <div className="text-sm text-red-500 text-center py-4">
+            載入失敗，請稍後再試
+          </div>
+        ) : (
+          <div className="space-y-2 lg:space-y-3">
+            {popularStories.slice(0, 5).map((story, index) => {
+              const isTop1 = index === 0
+              const isTop2 = index === 1
+              return (
+                <div 
+                  key={story.story_id} 
+                  onClick={() => handlePopularStoryClick(story.story_id)}
+                  className={`flex items-center justify-between p-2 lg:p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-all duration-200 ${
+                    isTop1 
+                      ? 'bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 shadow-sm' 
+                      : isTop2 
+                      ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 shadow-sm'
+                      : 'bg-gray-50'
                   }`}
                 >
-                  {followedStories.has(story.id) ? '已關注' : '關注'}
-                </button>
-              </div>
-              <p className="text-xs lg:text-sm text-gray-600 mb-2 line-clamp-2">{story.description}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-primary-600 font-medium">{story.type}</span>
-                <span className="text-xs text-gray-500">{story.status}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+                    {isTop1 && (
+                      <span className="text-yellow-500 text-sm font-bold">🔥</span>
+                    )}
+                    {isTop2 && (
+                      <span className="text-orange-500 text-sm font-bold">⭐</span>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className={`font-medium text-sm lg:text-base truncate ${
+                        isTop1 ? 'text-purple-800' : isTop2 ? 'text-orange-800' : 'text-gray-700'
+                      }`}>
+                        {story.title}
+                      </div>
+                      <div className="flex items-center space-x-2 mt-1">
+                        {getStatusIcon(story.status)}
+                        <span className={`text-xs ${
+                          story.status === '投票中' ? 'text-yellow-600' : 
+                          story.status === '撰寫中' ? 'text-blue-600' : 
+                          story.status === '已完結' ? 'text-green-600' : 'text-gray-500'
+                        }`}>
+                          {story.status}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {story.total_chapters} 章
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
+
 
       {/* 廣告區域 */}
       <div className="bg-gray-100 rounded-lg p-3 lg:p-4 text-center">

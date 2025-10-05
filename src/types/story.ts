@@ -103,9 +103,20 @@ export interface StoryWithChapter {
   chapter_voting?: VoteStats;
 }
 
+// 熱門故事介面
+export interface PopularStory {
+  story_id: string;
+  title: string;
+  status: '投票中' | '撰寫中' | '已完結';
+  total_chapters: number;
+  created_at: string;
+  last_updated: string;
+}
+
 // 首頁資料介面
 export interface HomePageData {
   stories: StoryWithChapter[];
+  popularStories: PopularStory[];
 }
 
 // API 回應基礎介面

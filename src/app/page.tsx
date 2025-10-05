@@ -88,6 +88,7 @@ export default function Home() {
     navigateToChapter(storyId, chapterNumber);
   }
 
+
   return (
     <div 
       className="space-y-6"
@@ -106,6 +107,7 @@ export default function Home() {
           onRetry={refetch}
         />
       )}
+
 
 
 
