@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePageSwipe, useStepSwipe, useCardSwipe } from '@/types/useSwipe';
-import { randomUUID } from 'crypto';
+// 使用瀏覽器原生的 crypto.randomUUID() 或自定義 UUID 生成函數
 
 export default function Origin() {
   const router = useRouter();
@@ -97,7 +97,19 @@ export default function Origin() {
   // 初始化投票者會話 ID
   useEffect(() => {
     if (!voterSession) {
-      setVoterSession(randomUUID());
+      // 使用瀏覽器原生的 crypto.randomUUID() 或自定義 UUID 生成函數
+      const generateUUID = () => {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          return crypto.randomUUID();
+        }
+        // 備用方案：生成簡單的 UUID
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+      setVoterSession(generateUUID());
     }
   }, [voterSession]);
 
