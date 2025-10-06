@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, transaction } from '@/lib/db';
 import { randomUUID } from 'crypto';
+import { IllustrationService } from '@/lib/services/IllustrationService';
 
 // OpenAI API 設定
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -235,12 +236,51 @@ export async function POST(
     const newChapterId = await saveChapterToDatabase(storyId, chapterData, chapterNumber);
     console.log('✅ 章節儲存成功，章節ID:', newChapterId);
 
+    // 異步生成章節插圖
+    let illustrationResult = null;
+    try {
+      console.log('🎨 開始生成章節插圖...');
+      const illustrationService = new IllustrationService();
+      
+      // 獲取故事類型（從故事設定中獲取，預設為都市）
+      const storyGenreResult = await query(`
+        SELECT setting_data->>'story_genre' as genre
+        FROM story_settings 
+        WHERE story_id = $1 AND setting_type = '插圖風格'
+        LIMIT 1
+      `, [storyId]);
+      
+      const storyGenre = storyGenreResult.rows[0]?.genre || '都市';
+      
+      illustrationResult = await illustrationService.generateIllustration({
+        chapterId: newChapterId,
+        storyId,
+        chapterTitle: chapterData.title,
+        chapterContent: chapterData.content,
+        storyGenre
+      });
+      
+      if (illustrationResult.success) {
+        console.log('✅ 章節插圖生成成功:', illustrationResult.illustrationUrl);
+      } else {
+        console.log('⚠️ 章節插圖生成失敗:', illustrationResult.error);
+      }
+    } catch (illustrationError) {
+      console.error('❌ 插圖生成過程發生錯誤:', illustrationError);
+      // 插圖生成失敗不影響章節生成的成功回應
+    }
+
     return NextResponse.json({
       success: true,
       chapterId: newChapterId,
       chapterNumber,
       chapterData,
-      message: '章節生成成功'
+      illustration: illustrationResult?.success ? {
+        url: illustrationResult.illustrationUrl,
+        style: illustrationResult.illustrationStyle,
+        generatedAt: illustrationResult.generatedAt
+      } : null,
+      message: '章節生成成功' + (illustrationResult?.success ? '，插圖已生成' : '，插圖生成失敗')
     });
 
   } catch (error) {

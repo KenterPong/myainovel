@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { ChapterVotingSection } from './ChapterVotingSection';
 import { ChapterNavigation } from './ChapterNavigation';
 import { ChapterListModal } from './ChapterListModal';
+import ChapterIllustration from './ChapterIllustration';
 import { getOriginTags } from '@/lib/utils/originTags';
 
 interface ChapterCardProps {
@@ -297,6 +298,19 @@ export function StoryCard({
               {chapter.title}
             </h3>
           </div>
+
+          {/* 章節插圖 */}
+          {chapter.illustration_url && (
+            <div className="mb-4">
+              <ChapterIllustration
+                illustrationUrl={chapter.illustration_url}
+                illustrationPrompt={chapter.illustration_prompt}
+                illustrationStyle={chapter.illustration_style}
+                chapterTitle={chapter.title}
+                className="w-full"
+              />
+            </div>
+          )}
           <div 
             className="text-gray-700 leading-relaxed cursor-pointer"
             onClick={handleContentClick}

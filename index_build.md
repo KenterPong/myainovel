@@ -447,24 +447,86 @@ interface ContentExpanderProps {
 - [ ] 建立投票組件
 - [ ] 整合到故事卡片中
 
-### 階段 5：優化與測試 (優先級：低)
+### 階段 5：章節插圖生成系統 (優先級：中)
+**目標**：整合 AI 插圖生成功能，為每個章節自動生成高品質插圖
+
+#### 5.1 資料庫擴展
+- [ ] 在 `chapters` 表新增插圖相關欄位：
+  - `illustration_url` (TEXT) - 本地儲存的圖片連結
+  - `illustration_prompt` (TEXT) - 插圖生成提示詞
+  - `illustration_style` (VARCHAR(100)) - 插圖風格
+  - `illustration_generated_at` (TIMESTAMP) - 插圖生成時間
+- [ ] 在 `story_settings` 表新增 `插圖風格` 設定類型
+- [ ] 建立插圖風格設定的 JSONB 資料結構
+- [ ] 建立資料庫遷移腳本
+
+#### 5.2 環境變數設定
+- [ ] 新增 AI 插圖生成相關環境變數：
+  - `OPENAI_IMAGE_MODEL=dall-e-3`
+  - `OPENAI_IMAGE_QUALITY=standard`
+  - `OPENAI_IMAGE_SIZE=1024x1024`
+  - `IMAGE_OUTPUT_FORMAT=webp`
+  - `IMAGE_QUALITY=85`
+  - `IMAGE_STORAGE_PATH=public/images/stories`
+
+#### 5.3 圖片處理服務開發
+- [ ] 建立 `IllustrationService` 類別
+- [ ] 實作 OpenAI DALL-E 3 API 呼叫功能
+- [ ] 實作圖片下載和格式轉換功能
+- [ ] 整合 Sharp 圖片處理庫
+- [ ] 實作 WebP 格式轉換和優化
+- [ ] 實作本地檔案儲存機制
+
+#### 5.4 插圖生成流程整合
+- [ ] 修改章節生成 API (`/api/stories/[id]/chapters/generate`)
+- [ ] 在章節內容生成後自動觸發插圖生成
+- [ ] 實作異步插圖生成機制
+- [ ] 整合插圖生成到章節儲存流程
+- [ ] 實作插圖生成錯誤處理和重試機制
+
+#### 5.5 故事風格管理系統
+- [ ] 建立故事類型與插圖風格對應表
+- [ ] 實作風格提示詞模板系統
+- [ ] 建立風格一致性驗證機制
+- [ ] 實作故事風格設定 API
+- [ ] 建立風格預覽功能
+
+#### 5.6 插圖顯示功能
+- [ ] 修改 `StoryCard` 組件支援插圖顯示
+- [ ] 實作插圖懶載入機制
+- [ ] 整合 Next.js Image 組件優化
+- [ ] 實作插圖載入狀態和錯誤處理
+- [ ] 建立預設插圖備用機制
+
+#### 5.7 檔案管理系統
+- [ ] 建立 `public/images/stories/` 目錄結構
+- [ ] 實作按故事 ID 分資料夾存放機制
+- [ ] 建立檔案命名規範 (`{chapter_id}.webp`)
+- [ ] 實作檔案清理和維護功能
+- [ ] 建立插圖檔案完整性檢查
+
+### 階段 6：優化與測試 (優先級：低)
 **目標**：效能優化、錯誤處理、用戶體驗完善
 
-#### 5.1 效能優化
+#### 6.1 效能優化
 - [ ] 實作投票輪詢機制
 - [ ] 優化資料載入策略
 - [ ] 實作內容懶載入
+- [ ] 優化插圖載入效能
+- [ ] 實作插圖快取機制
 
-#### 5.2 錯誤處理
+#### 6.2 錯誤處理
 - [ ] 完善載入狀態處理
 - [ ] 實作錯誤重試機制
 - [ ] 添加用戶友好的錯誤提示
+- [ ] 實作插圖生成失敗降級處理
 
-#### 5.3 測試與驗收
+#### 6.3 測試與驗收
 - [ ] 功能測試
 - [ ] 響應式測試
 - [ ] 效能測試
 - [ ] 用戶體驗測試
+- [ ] 插圖生成品質測試
 
 ## 🔍 關鍵技術考量
 
@@ -498,33 +560,50 @@ interface ContentExpanderProps {
 ```
 src/
 ├── lib/
-│   └── hooks/
-│       ├── useHomeData.ts          # 首頁資料獲取
-│       ├── useChapterVoting.ts     # 章節投票管理
-│       └── useVotePolling.ts       # 投票統計輪詢
+│   ├── hooks/
+│   │   ├── useHomeData.ts          # 首頁資料獲取
+│   │   ├── useChapterVoting.ts     # 章節投票管理
+│   │   └── useVotePolling.ts       # 投票統計輪詢
+│   └── services/
+│       └── IllustrationService.ts  # 插圖生成服務
 ├── types/
 │   ├── story.ts                    # 故事型別定義
 │   ├── chapter.ts                  # 章節型別定義
-│   └── voting.ts                   # 投票型別定義
+│   ├── voting.ts                   # 投票型別定義
+│   └── illustration.ts             # 插圖型別定義
 ├── components/
 │   ├── StoryCard.tsx               # 故事卡片組件
 │   ├── VotingSection.tsx           # 投票區域組件
 │   ├── VoteOption.tsx              # 投票選項組件
 │   ├── ContentExpander.tsx         # 內容展開組件
 │   ├── OriginTags.tsx              # 故事起源標籤組件
+│   ├── ChapterIllustration.tsx     # 章節插圖組件
 │   ├── LoadingState.tsx            # 載入狀態組件
 │   ├── ErrorState.tsx              # 錯誤狀態組件
 │   └── EmptyState.tsx              # 空資料狀態組件
 ├── app/
 │   └── api/
-│       └── stories/
-│           └── [id]/
-│               └── chapters/
-│                   └── [chapterId]/
-│                       └── vote/
-│                           └── route.ts  # 章節投票 API
-└── app/
-    └── page.tsx                    # 首頁主組件
+│       ├── stories/
+│       │   └── [id]/
+│       │       └── chapters/
+│       │           ├── [chapterId]/
+│       │           │   └── vote/
+│       │           │       └── route.ts  # 章節投票 API
+│       │           └── generate/
+│       │               └── route.ts      # 章節生成 API（含插圖）
+│       └── illustrations/
+│           ├── generate/
+│           │   └── route.ts              # 插圖生成 API
+│           └── styles/
+│               └── route.ts              # 插圖風格管理 API
+├── app/
+│   └── page.tsx                    # 首頁主組件
+└── public/
+    └── images/
+        ├── stories/                # 章節插圖存放目錄
+        │   └── {story_id}/         # 按故事 ID 分資料夾
+        │       └── {chapter_id}.webp  # 章節插圖檔案
+        └── default-illustration.png  # 預設插圖
 ```
 
 ## 📝 驗收標準
@@ -557,12 +636,28 @@ src/
 - [ ] 長內容載入效能良好
 - [ ] 手勢操作直觀且無衝突
 
+### 階段 5 驗收標準（章節插圖生成系統）
+- [ ] 資料庫成功新增插圖相關欄位
+- [ ] 環境變數設定正確，包含所有插圖生成參數
+- [ ] IllustrationService 類別正常運作
+- [ ] OpenAI DALL-E 3 API 整合成功
+- [ ] 圖片下載和 WebP 轉換功能正常
+- [ ] 本地檔案儲存機制運作正常
+- [ ] 章節生成後能自動觸發插圖生成
+- [ ] 故事風格管理系統運作正常
+- [ ] 插圖在首頁正確顯示
+- [ ] 插圖懶載入和優化功能正常
+- [ ] 預設插圖備用機制運作正常
+- [ ] 檔案管理系統正常運作
+
 ### 整體驗收標準
-- [ ] 資料庫擴展完成，包含章節投票相關表
+- [ ] 資料庫擴展完成，包含章節投票相關表和插圖欄位
 - [ ] API 端點正常運作，支援投票和統計查詢
 - [ ] 首頁能正確顯示真實的故事資料
 - [ ] 章節投票功能正常運作
 - [ ] 投票達到門檻時能觸發 AI 生成
+- [ ] 章節插圖生成功能正常運作
+- [ ] 插圖風格一致性管理正常
 - [ ] 載入狀態和錯誤處理完善
 - [ ] 響應式設計正常
 - [ ] 效能符合預期
@@ -584,3 +679,13 @@ src/
 - 保持現有的故事生成流程
 - 新增章節投票觸發機制
 - 整合投票結果到 AI 生成參數中
+- 新增章節插圖生成功能
+- 整合插圖生成到章節生成流程
+
+### 章節插圖生成系統
+- 整合 OpenAI DALL-E 3 API
+- 實作故事風格一致性管理
+- 建立本地圖片儲存機制
+- 整合到現有章節生成流程
+- 支援 WebP 格式優化
+- 建立插圖顯示和載入優化機制

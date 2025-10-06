@@ -37,6 +37,9 @@
 - ✅ 完整故事架構（角色、世界觀、大綱）
 - ✅ 錯誤處理與資料清理
 - ✅ 視覺化故事展示介面
+- ✅ AI 章節插圖生成系統
+- ✅ 故事風格一致性管理
+- ✅ 插圖快取與效能優化
 
 ### 互動式投票系統
 - ✅ 故事起源投票機制
@@ -157,6 +160,16 @@ NEXT_PUBLIC_GA_ID=your-google-analytics-id
 # AI 服務設定
 OPENAI_API_KEY=your-openai-api-key
 
+# AI 插圖生成設定
+OPENAI_IMAGE_MODEL=dall-e-3
+OPENAI_IMAGE_QUALITY=standard
+OPENAI_IMAGE_SIZE=1024x1024
+
+# 圖片處理設定
+IMAGE_OUTPUT_FORMAT=webp
+IMAGE_QUALITY=85
+IMAGE_STORAGE_PATH=public/images/stories
+
 # 投票系統設定
 NEXT_PUBLIC_VOTING_THRESHOLD=100    //票數達成門檻
 NEXT_PUBLIC_VOTING_DURATION_DAYS=7  //投票持續天數
@@ -176,8 +189,12 @@ myainovel/
 │   ├── favicon.ico
 │   ├── robots.txt
 │   ├── sitemap.xml
-│   └── images/                 # 圖片資源（非必須）
-│       └── logo.png
+│   └── images/                 # 靜態圖片資源
+│       ├── logo.png           # 網站 Logo
+│       ├── default-illustration.png  # 預設章節插圖（插圖生成失敗時使用）
+│       └── stories/           # AI 生成的章節插圖
+│           └── {story_id}/    # 按故事 ID 分資料夾
+│               └── {chapter_id}.webp  # 章節插圖（WebP 格式）
 │
 ├── src/                        # (官方推薦) 將所有程式碼放在 src 下
 │   ├── app/                    # App Router 入口 (Next.js 13/14 標準)
@@ -261,9 +278,19 @@ myainovel/
 - 主題相關樣式
 
 #### `public/images/` → 靜態圖片（若需 SEO 或固定資產）
-- 網站圖示、Logo
-- 社群分享圖片
-- 其他靜態圖片資源
+- **網站圖示、Logo**：favicon、網站標識等固定資源
+- **社群分享圖片**：Open Graph 圖片、Twitter Card 圖片
+- **預設插圖**：AI 插圖生成失敗時的備用圖片
+- **其他靜態圖片資源**：不常變動的圖片資產
+
+#### AI 生成插圖存放策略
+- **主要存放**：本地伺服器 `public/images/stories/{story_id}/{chapter_id}.webp`
+- **資料庫記錄**：插圖 URL 儲存在 `chapters.illustration_url` 欄位
+- **格式優化**：WebP 格式，檔案大小減少 25-35%
+- **解析度統一**：1024x1024 像素
+- **存取方式**：透過自有伺服器交付，確保永久可用性
+- **檔案管理**：按故事 ID 分資料夾存放，便於維護
+- **效能優勢**：自有 CDN 控制，載入速度更快更穩定
 
 ## 🔧 重要檔案說明
 
@@ -431,6 +458,153 @@ AI 生成的 JSON 結構會自動對應到以下資料庫欄位：
 - 支援中文顯示和 UTF-8 編碼
 - 提供關閉視窗功能
 
+#### AI 章節插圖生成系統
+
+本系統整合 **OpenAI DALL-E 3** 模型，為每個章節自動生成高品質插圖，提升閱讀體驗和視覺吸引力。
+
+##### 插圖生成策略
+
+###### 1. 成本控制與品質平衡
+- **單章節單插圖**：每章節只生成一張高品質插圖，控制成本
+- **載入速度優先**：使用 `standard` 品質設定，平衡生成速度與解析度
+- **固定解析度**：統一使用 `1024x1024` 解析度，確保一致性
+- **一次生成**：插圖生成後不再更新，避免重複成本
+
+###### 2. 故事風格一致性管理
+- **風格鎖定機制**：每個故事根據最外層類型設定固定畫風
+- **風格提示詞預設**：預先定義各類型故事的風格提示詞模板
+- **風格繼承**：所有章節插圖都繼承該故事的固定風格設定
+- **風格驗證**：確保同一故事內所有插圖風格保持一致
+
+###### 3. 故事類型與風格對應表
+
+| 故事類型 | 風格名稱 | 風格特徵 | 色彩基調 |
+|---------|---------|---------|---------|
+| **科幻** | 賽博龐克插畫風 | 霓虹色彩、未來城市、高科技感 | 青藍、洋紅、黃色 |
+| **奇幻** | 魔幻插畫風 | 魔法元素、神秘氛圍、史詩感 | 金黃、深紫、翠綠 |
+| **都市** | 現代插畫風 | 簡約線條、都市生活、寫實感 | 灰藍、暖橙、米白 |
+| **懸疑** | 暗黑插畫風 | 陰暗氛圍、神秘感、緊張感 | 深灰、暗紅、墨綠 |
+| **愛情** | 浪漫插畫風 | 柔和色調、溫馨氛圍、情感表達 | 粉紅、淡紫、暖黃 |
+| **冒險** | 動感插畫風 | 動態構圖、活力感、刺激感 | 鮮橙、亮藍、火紅 |
+
+###### 4. 插圖生成流程
+
+1. **章節內容分析**：
+   - 分析章節標題和關鍵情節
+   - 提取主要角色和場景描述
+   - 識別情感基調和氛圍
+
+2. **風格提示詞組合**：
+   - 取得故事固定風格設定
+   - 結合章節具體內容描述
+   - 生成完整的插圖提示詞
+
+3. **DALL-E 3 API 調用**：
+   - 使用預設的品質和尺寸設定
+   - 確保生成速度與品質平衡
+   - 處理 API 錯誤和重試機制
+
+4. **插圖處理與儲存**：
+   - **AI 生成**：後端伺服器呼叫 OpenAI DALL-E 3 API 生成圖片
+   - **下載圖片**：伺服器使用 API 返回的臨時 URL，立即下載原始檔案
+   - **優化處理**：在伺服器端將圖片轉換為 WebP 格式，提升載入速度
+   - **檔案命名**：使用章節 ID 作為檔名，確保唯一性
+   - **本地儲存**：轉換後存到 `public/images/stories/{story_id}/{chapter_id}.webp`
+   - **資料庫更新**：將永久圖片 URL 寫入 `chapters.illustration_url` 欄位
+   - **網頁讀取**：Next.js 從資料庫讀取 URL，透過自有 CDN 交付圖片
+   - **格式統一**：WebP 格式，1024x1024 解析度，優化檔案大小
+   - **永久可用**：圖片儲存在自有伺服器，確保長期可用性
+
+###### 5. 詳細實作流程
+
+**步驟 1：AI 生成**
+```typescript
+// 呼叫 OpenAI DALL-E 3 API
+const response = await fetch('https://api.openai.com/v1/images/generations', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${OPENAI_API_KEY}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'dall-e-3',
+    prompt: illustrationPrompt,
+    n: 1,
+    size: '1024x1024',
+    quality: 'standard'
+  })
+});
+```
+
+**步驟 2：下載圖片**
+```typescript
+// 從 OpenAI 臨時 URL 下載圖片
+const imageResponse = await fetch(openaiImageUrl);
+const imageBuffer = await imageResponse.arrayBuffer();
+```
+
+**步驟 3：優化處理**
+```typescript
+// 使用 Sharp 或其他圖片處理庫轉換為 WebP
+import sharp from 'sharp';
+const webpBuffer = await sharp(imageBuffer)
+  .webp({ quality: 85 })
+  .toBuffer();
+```
+
+**步驟 4：本地儲存**
+```typescript
+// 建立資料夾結構並儲存
+const storyDir = `public/images/stories/${storyId}`;
+const fileName = `${chapterId}.webp`;
+const filePath = path.join(storyDir, fileName);
+
+// 確保資料夾存在
+await fs.mkdir(storyDir, { recursive: true });
+await fs.writeFile(filePath, webpBuffer);
+```
+
+**步驟 5：更新資料庫**
+```typescript
+// 更新 chapters 表的 illustration_url 欄位
+const illustrationUrl = `/images/stories/${storyId}/${chapterId}.webp`;
+await query(
+  'UPDATE chapters SET illustration_url = $1 WHERE chapter_id = $2',
+  [illustrationUrl, chapterId]
+);
+```
+
+###### 6. 插圖提示詞模板範例
+
+**科幻類型 - 賽博龐克風格**：
+```
+Cyberpunk illustration style, neon colors, dark atmosphere, futuristic cityscape, detailed character design, high contrast lighting, digital art aesthetic. Scene: [章節場景描述]. Characters: [主要角色描述]. Mood: [情感氛圍]. Style: Clean lines, vibrant neon colors, high-tech elements.
+```
+
+**奇幻類型 - 魔幻風格**：
+```
+Fantasy illustration style, magical atmosphere, epic fantasy setting, detailed character design, mystical lighting, digital art aesthetic. Scene: [章節場景描述]. Characters: [主要角色描述]. Mood: [情感氛圍]. Style: Rich colors, magical elements, mystical atmosphere.
+```
+
+###### 7. 效能優化策略
+
+- **異步生成**：章節內容立即返回，插圖在背景生成
+- **WebP 格式**：自動轉換為 WebP 格式，檔案大小減少 25-35%
+- **本地快取**：使用 Next.js 的圖片快取機制，避免重複下載
+- **自有 CDN**：透過自有伺服器交付圖片，確保載入速度
+- **錯誤處理**：插圖生成失敗時使用預設插圖或重試機制
+- **載入優化**：使用 Next.js Image 組件進行自動格式轉換和尺寸優化
+- **懶載入**：插圖採用懶載入策略，只在進入視窗時才載入
+- **預載入**：重要章節的插圖可預先載入，提升用戶體驗
+- **檔案管理**：按故事 ID 分資料夾存放，便於管理和維護
+
+###### 8. 成本控制機制
+
+- **預算監控**：追蹤每月插圖生成成本
+- **品質分級**：根據故事重要性調整插圖品質
+- **重複檢查**：避免為相同內容重複生成插圖
+- **批次優化**：可選的批次生成功能以降低單次成本
+
 ## 🗄️ 資料庫設計
 
 ### PostgreSQL 資料庫架構
@@ -472,6 +646,10 @@ AI 生成的 JSON 結構會自動對應到以下資料庫欄位：
 | `voting_status` | `VARCHAR(20)` | **投票狀態** | '進行中', '已截止', '已生成' |
 | `user_choice` | `VARCHAR(255)` | 該章節是根據哪個**讀者票選選項**生成的 | 例：'選項 B: 前往地下城' |
 | `previous_summary_context` | `TEXT` | 生成此章節時，傳遞給 AI 的**前一章摘要** | 可選，用於追蹤上下文 |
+| `illustration_url` | `TEXT` | **章節插圖 URL** | 本地儲存的圖片連結，格式：`/images/stories/{story_id}/{chapter_id}.webp` |
+| `illustration_prompt` | `TEXT` | **插圖生成提示詞** | 用於生成插圖的 AI 提示詞 |
+| `illustration_style` | `VARCHAR(100)` | **插圖風格** | 繼承自故事類型的固定風格 |
+| `illustration_generated_at` | `TIMESTAMP WITH TIME ZONE` | **插圖生成時間** | 記錄插圖生成完成時間 |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | 記錄生成時間 | |
 
 ##### 3. `story_settings` (故事設定檔表)
@@ -481,7 +659,7 @@ AI 生成的 JSON 結構會自動對應到以下資料庫欄位：
 |---------|---------|------|------|
 | `setting_id` | `SERIAL` | 主鍵 | |
 | `story_id` | `UUID` | **外鍵**：指向所屬的故事 | 確保設定歸屬 |
-| `setting_type` | `VARCHAR(50)` | **憲法級設定類別** | '角色', '世界觀', '大綱' - 不可動搖的存在 |
+| `setting_type` | `VARCHAR(50)` | **憲法級設定類別** | '角色', '世界觀', '大綱', '插圖風格' - 不可動搖的存在 |
 | `setting_data` | `JSONB` | **核心資料**：詳細的設定資訊和章節大綱 | **最重要欄位！** 持續更新 |
 | `last_updated_at` | `TIMESTAMP WITH TIME ZONE` | 記錄最後更新時間 | 方便追蹤設定的修改 |
 
@@ -609,7 +787,20 @@ chapters (1) ←→ (N) chapter_votes
 }
 ```
 
-##### D. 投票選項格式 (`voting_options` 欄位)
+##### D. 插圖風格設定 (`setting_type` = '插圖風格')
+```json
+{
+  "story_genre": "科幻",
+  "style_name": "賽博龐克插畫風",
+  "style_prompt": "Cyberpunk illustration style, neon colors, dark atmosphere, futuristic cityscape, detailed character design, high contrast lighting, digital art aesthetic",
+  "color_palette": ["#00FFFF", "#FF00FF", "#FFFF00", "#000000"],
+  "art_style": "Digital illustration with clean lines and vibrant neon colors",
+  "mood": "Dark, mysterious, high-tech",
+  "character_style": "Anime-inspired character design with cyberpunk elements"
+}
+```
+
+##### E. 投票選項格式 (`voting_options` 欄位)
 ```json
 {
   "options": [
@@ -666,6 +857,8 @@ chapters (1) ←→ (N) chapter_votes
    - 儲存新章節的 `full_text` 和 AI 生成的 `summary`
    - **同步更新** `story_settings` 的章節大綱 `setting_data`
    - 核對新章節是否符合憲法級設定，違背則重新生成
+   - **生成章節插圖**：根據故事類型風格和章節內容生成對應插圖
+   - **儲存插圖資訊**：將插圖 URL、提示詞、風格等資訊存入資料庫
 
 #### 故事起源投票機制
 
@@ -907,6 +1100,7 @@ interface VoteStatsResponse {
 
 ##### 1. 故事展示區域
 - **最新章節**：顯示**跨故事**所有章節內容，按生成時間由新到舊排序
+- **章節插圖**：每個章節上方顯示對應的 AI 生成插圖
 - **故事卡片**：包含故事標題、章節資訊、投票狀態
 - **章節導航**：非第一章節時顯示左右箭頭，可跳轉前後章節
 - **故事篩選**：點擊故事標題可篩選該故事的所有章節
@@ -970,6 +1164,10 @@ interface StoryWithChapter {
     voting_status: '投票中' | '已投票' | '投票截止';
     voting_deadline?: string;
     voting_options?: VotingOption[];
+    illustration_url?: string;
+    illustration_prompt?: string;
+    illustration_style?: string;
+    illustration_generated_at?: string;
     created_at: string;
   };
   
@@ -986,6 +1184,7 @@ interface StoryWithChapter {
     characters?: any;
     worldview?: any;
     outline?: any;
+    illustration_style?: any;
   };
 }
 ```

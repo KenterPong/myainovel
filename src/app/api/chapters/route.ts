@@ -16,7 +16,11 @@ export async function GET(request: NextRequest) {
         s.story_id,
         s.status as story_status,
         s.created_at as story_created_at,
-        s.voting_result
+        s.voting_result,
+        c.illustration_url,
+        c.illustration_prompt,
+        c.illustration_style,
+        c.illustration_generated_at
       FROM chapters c
       JOIN stories s ON c.story_id = s.story_id
     `;
