@@ -50,6 +50,8 @@
 - ✅ 響應式投票介面
 - ✅ 章節投票UI改進（收合功能、圖標導航）
 - ✅ 三按鈕導航系統（上一章、章節列表、下一章）
+- ✅ 章節滿意度投票系統（表情符號投票）
+- ✅ 社群媒體分享功能（X、Facebook、Line、Instagram）
 
 ## 📦 使用方式
 
@@ -179,6 +181,23 @@ NEXT_PUBLIC_VOTING_COOLDOWN_HOURS=24  //可重複投票時間
 NEXT_PUBLIC_CHAPTER_VOTING_THRESHOLD=100  //章節投票選項達到此票數才觸發 AI 生成
 NEXT_PUBLIC_CHAPTER_VOTING_DURATION_HOURS=24  //章節投票持續時間（小時）
 NEXT_PUBLIC_CHAPTER_VOTING_COOLDOWN_HOURS=24  //章節投票冷卻時間（小時）
+
+# 社群分享設定
+SOCIAL_SHARE_ENABLED=true
+SOCIAL_SHARE_PLATFORMS=twitter,facebook,line,instagram
+
+# Hashtag 設定
+SOCIAL_HASHTAG_MAIN=#AIStepMasterS1
+SOCIAL_HASHTAG_TYPE=#AI小說
+
+# 分享文案設定
+SOCIAL_SHARE_MAX_LENGTH=100
+SOCIAL_SHARE_INCLUDE_EXCERPT=true
+
+# 圖片分享設定
+SOCIAL_IMAGE_GENERATE_SIZES=true
+SOCIAL_IMAGE_QUALITY=85
+SOCIAL_IMAGE_FORMAT=webp
 ```
 
 ## 📁 專案結構
@@ -194,7 +213,12 @@ myainovel/
 │       ├── default-illustration.png  # 預設章節插圖（插圖生成失敗時使用）
 │       └── stories/           # AI 生成的章節插圖
 │           └── {story_id}/    # 按故事 ID 分資料夾
-│               └── {chapter_id}.webp  # 章節插圖（WebP 格式）
+│               ├── {chapter_id}.webp  # 章節插圖（WebP 格式）
+│               └── shares/    # 分享用圖片目錄
+│                   ├── {chapter_id}_twitter.webp
+│                   ├── {chapter_id}_facebook.webp
+│                   ├── {chapter_id}_line.webp
+│                   └── {chapter_id}_instagram.webp
 │
 ├── src/                        # (官方推薦) 將所有程式碼放在 src 下
 │   ├── app/                    # App Router 入口 (Next.js 13/14 標準)
@@ -716,6 +740,29 @@ Fantasy illustration style, magical atmosphere, epic fantasy setting, detailed c
 | `vote_count` | `INTEGER` | **票數統計** | 即時更新，用於門檻檢查 |
 | `last_updated` | `TIMESTAMP WITH TIME ZONE` | **最後更新時間** | 追蹤統計更新 |
 
+##### 8. `chapter_satisfaction_votes` (章節滿意度投票表)
+記錄讀者對章節的滿意度投票，使用表情符號進行單向量化回饋。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `vote_id` | `SERIAL` | **主鍵**：每個投票記錄的唯一 ID | |
+| `chapter_id` | `INTEGER` | **外鍵**：指向所屬的章節 | 確保投票歸屬 |
+| `vote_type` | `VARCHAR(20)` | **投票類型** | 'like', 'star', 'fire', 'heart' |
+| `ip_address` | `INET` | **投票者 IP 地址** | 用於防重複投票 |
+| `user_agent` | `TEXT` | **瀏覽器資訊** | 可選，用於分析 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **投票時間** | 用於時間限制檢查 |
+
+##### 9. `chapter_shares` (章節分享記錄表)
+記錄讀者分享章節到社群媒體的行為，用於追蹤分享效果。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `share_id` | `SERIAL` | **主鍵**：每個分享記錄的唯一 ID | |
+| `chapter_id` | `INTEGER` | **外鍵**：指向所屬的章節 | 確保分享歸屬 |
+| `platform` | `VARCHAR(20)` | **分享平台** | 'twitter', 'facebook', 'line', 'instagram' |
+| `ip_address` | `INET` | **分享者 IP 地址** | 用於統計分析 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | **分享時間** | 用於追蹤分享時機 |
+
 #### 資料表關聯設計
 
 ```
@@ -730,6 +777,10 @@ stories (1) ←→ (N) chapters
 chapters (1) ←→ (N) chapter_votes
     ↓
     (1) ←→ (N) chapter_vote_totals
+    ↓
+    (1) ←→ (N) chapter_satisfaction_votes
+    ↓
+    (1) ←→ (N) chapter_shares
 ```
 
 - **`chapters.story_id`** → `stories.story_id` (外鍵)
@@ -740,6 +791,8 @@ chapters (1) ←→ (N) chapter_votes
 - **`chapter_votes.story_id`** → `stories.story_id` (外鍵)
 - **`chapter_vote_totals.chapter_id`** → `chapters.chapter_id` (外鍵)
 - **`chapter_vote_totals.story_id`** → `stories.story_id` (外鍵)
+- **`chapter_satisfaction_votes.chapter_id`** → `chapters.chapter_id` (外鍵)
+- **`chapter_shares.chapter_id`** → `chapters.chapter_id` (外鍵)
 
 #### JSONB 欄位格式範例
 
@@ -852,11 +905,13 @@ chapters (1) ←→ (N) chapter_votes
 3. **整合 Prompt**：
    - 將憲法級設定、前一章摘要、章節大綱組合成完整上下文
    - 確保 AI 理解角色性格、世界觀規則、劇情脈絡
+   - **確保生成內容品質**：每章節至少800字，內容豐富且連貫
 
 4. **章節創作後**：
    - 儲存新章節的 `full_text` 和 AI 生成的 `summary`
    - **同步更新** `story_settings` 的章節大綱 `setting_data`
    - 核對新章節是否符合憲法級設定，違背則重新生成
+   - **驗證內容品質**：檢查生成內容是否為真實故事內容，非模板文字
    - **生成章節插圖**：根據故事類型風格和章節內容生成對應插圖
    - **儲存插圖資訊**：將插圖 URL、提示詞、風格等資訊存入資料庫
 
@@ -940,6 +995,122 @@ interface VoteStatsResponse {
     userVoted: boolean;
     userChoice?: string;
     threshold: number;
+  };
+}
+```
+
+#### 章節滿意度投票系統
+
+##### 滿意度投票設計理念
+- **極低門檻互動**：使用表情符號進行單向量化回饋，無需輸入文字
+- **視覺化設計**：簡潔的 2x2 網格排列，適合各種螢幕尺寸
+- **即時回饋**：點擊後立即顯示總票數，增強用戶成就感
+- **隱私保護**：匿名投票，不顯示使用者 ID
+
+##### 投票選項設計
+```
+👍 喜歡 (like)    ⭐ 精彩 (star)
+🔥 超讚 (fire)    💖 感動 (heart)
+```
+
+##### 滿意度投票 API 端點
+```typescript
+// POST /api/stories/[id]/chapters/[chapterId]/satisfaction
+interface SatisfactionVoteRequest {
+  voteType: 'like' | 'star' | 'fire' | 'heart';
+}
+
+interface SatisfactionVoteResponse {
+  success: boolean;
+  data: {
+    voteCounts: {
+      like: number;
+      star: number;
+      fire: number;
+      heart: number;
+    };
+    totalVotes: number;
+    userVoted: boolean;
+  };
+}
+
+// GET /api/stories/[id]/chapters/[chapterId]/satisfaction
+interface SatisfactionStatsResponse {
+  success: boolean;
+  data: {
+    chapterId: number;
+    voteCounts: {
+      like: number;
+      star: number;
+      fire: number;
+      heart: number;
+    };
+    totalVotes: number;
+    userVoted: boolean;
+    userVoteType?: string;
+  };
+}
+```
+
+#### 社群媒體分享系統
+
+##### 分享平台支援
+- **X (Twitter)**：1200x675px，280 字元限制
+- **Facebook**：1200x630px，無字元限制
+- **Line**：800x600px，無字元限制
+- **Instagram**：1080x1080px，2200 字元限制
+
+##### Hashtag 策略
+- **主要標籤**：`#AIStepMasterS1` (固定品牌標籤)
+- **類型標籤**：`#AI小說` (固定類型標籤)
+- **類型標籤**：根據故事類型動態生成 (如 `#奇幻小說`、`#科幻小說`)
+
+##### 分享文案生成
+```typescript
+// 自動生成分享文案模板
+const shareTemplates = {
+  twitter: "📖《{storyTitle}》{chapterTitle}！{emoji} {hashtags}", // ~60 字元
+  facebook: "📚《{storyTitle}》{chapterTitle}！{excerpt} {hashtags}", // ~80 字元
+  line: "📖 {storyTitle} - {chapterTitle} {hashtags}", // ~50 字元
+  instagram: "📚 {storyTitle}\n{chapterTitle}\n{hashtags}" // ~40 字元
+};
+```
+
+##### 圖片分享優化
+- **預生成多尺寸**：章節插圖生成時同時生成各平台專用尺寸
+- **WebP 格式**：所有平台都支援，檔案更小載入更快
+- **檔案命名**：`{chapter_id}_{platform}.webp`
+- **儲存路徑**：`public/images/stories/{story_id}/shares/`
+
+##### 社群分享 API 端點
+```typescript
+// POST /api/stories/[id]/chapters/[chapterId]/share
+interface ShareRequest {
+  platform: 'twitter' | 'facebook' | 'line' | 'instagram';
+}
+
+interface ShareResponse {
+  success: boolean;
+  data: {
+    shareUrl: string;
+    shareText: string;
+    shareImage: string;
+    hashtags: string;
+  };
+}
+
+// GET /api/stories/[id]/chapters/[chapterId]/share-stats
+interface ShareStatsResponse {
+  success: boolean;
+  data: {
+    chapterId: number;
+    shareCounts: {
+      twitter: number;
+      facebook: number;
+      line: number;
+      instagram: number;
+    };
+    totalShares: number;
   };
 }
 ```

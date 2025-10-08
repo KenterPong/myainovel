@@ -43,3 +43,17 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# Images - 過濾圖片檔案
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.svg
+*.bmp
+*.tiff
+*.ico
+
+# 特定目錄的圖片
+public/images/stories/

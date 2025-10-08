@@ -85,7 +85,19 @@ export function useChapterVoting({ storyId, chapterId, enabled = true }: UseChap
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        const errorMessage = errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+        
+        // 如果是投票已結束的錯誤，更新本地狀態而不是拋出錯誤
+        if (errorMessage.includes('投票已結束')) {
+          setVoteStats(prev => prev ? {
+            ...prev,
+            votingStatus: '投票截止',
+            isVotingActive: false
+          } : null);
+          return { success: false, message: errorMessage };
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data: ChapterVoteResponse = await response.json();

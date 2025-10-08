@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { VoteStats, VotingOption } from '@/types/voting';
 import { VoteOption } from './VoteOption';
 import { useChapterVoting } from '@/lib/hooks/useChapterVoting';
-import { useVotePolling } from '@/lib/hooks/useVotePolling';
+// 移除投票輪詢功能，避免妨礙使用者閱讀和投票
 
 interface ChapterVotingSectionProps {
   storyId: string;
@@ -44,16 +44,8 @@ export function ChapterVotingSection({
     }
   }, [voteStats?.votingStatus]);
 
-  // 投票統計輪詢
-  useVotePolling({
-    storyId,
-    chapterId,
-    enabled: voteStats?.isVotingActive || false,
-    interval: 3000, // 3 秒輪詢一次
-    onUpdate: (newStats) => {
-      // 這裡可以添加額外的更新邏輯
-    }
-  });
+  // 移除投票統計輪詢，避免妨礙使用者閱讀和投票
+  // 投票統計將在投票時手動更新
 
   // 處理投票提交
   const handleVote = async (optionId: string) => {
@@ -79,6 +71,18 @@ export function ChapterVotingSection({
       }
     } catch (error) {
       console.error('投票失敗:', error);
+      
+      // 處理投票已結束的情況
+      if (error instanceof Error && error.message.includes('投票已結束')) {
+        setLocalVotingStatus('投票截止');
+        onVotingStatusChange?.('投票截止');
+        // 觸發新章節生成通知
+        onNewChapterGenerated?.();
+        return; // 不顯示錯誤，直接返回
+      }
+      
+      // 其他錯誤可以顯示給用戶
+      console.error('投票過程中發生錯誤:', error);
     } finally {
       setIsSubmitting(false);
     }

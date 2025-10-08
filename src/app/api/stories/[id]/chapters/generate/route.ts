@@ -7,20 +7,39 @@ import { IllustrationService } from '@/lib/services/IllustrationService';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// 生成章節的提示詞（不帶入讀者選擇）
-function generateChapterPrompt(storyTitle: string, previousChapter: any, chapterNumber: string) {
+// 生成章節的提示詞（帶入讀者選擇）
+function generateChapterPrompt(storyTitle: string, previousChapter: any, chapterNumber: string, storySettings: any) {
+  const characters = storySettings.characters || {};
+  const worldview = storySettings.worldview || {};
+  const outline = storySettings.outline || {};
+
   return `請根據以下資訊生成小說章節：
 
 故事標題：${storyTitle}
 章節編號：第 ${chapterNumber} 章
+
+故事設定：
+- 角色設定：${JSON.stringify(characters, null, 2)}
+- 世界觀設定：${JSON.stringify(worldview, null, 2)}
+- 故事大綱：${JSON.stringify(outline, null, 2)}
+
 上一章節內容：${previousChapter?.full_text || '這是故事的第一章'}
 上一章節摘要：${previousChapter?.summary || '故事開始'}
 
 請根據故事的自然發展邏輯生成一個完整的章節，包含：
 1. 章節標題
-2. 章節內容（至少 500 字）
+2. 章節內容（至少 800 字，內容要豐富且具體，避免重複的模板文字）
 3. 章節摘要（100-150 字）
 4. 三個投票選項供讀者選擇下一章節的發展方向
+
+重要要求：
+- 章節內容必須是具體的故事情節，不是抽象的描述
+- 內容要生動有趣，有具體的場景、對話和情節發展
+- 避免使用「故事繼續發展」、「情節自然推進」等模板化表達
+- 確保內容與故事背景和角色設定相符
+- 根據提供的角色設定來發展角色互動
+- 根據世界觀設定來描述環境和背景
+- 根據故事大綱來推進情節發展
 
 請以 JSON 格式回傳：
 {
@@ -184,6 +203,29 @@ export async function POST(
 
     const storyTitle = storyResult.rows[0].title;
 
+    // 獲取故事設定資料
+    const settingsResult = await query(`
+      SELECT setting_type, setting_data
+      FROM story_settings 
+      WHERE story_id = $1
+    `, [storyId]);
+
+    const storySettings = {
+      characters: {},
+      worldview: {},
+      outline: {}
+    };
+
+    settingsResult.rows.forEach(row => {
+      if (row.setting_type === '角色') {
+        storySettings.characters = row.setting_data;
+      } else if (row.setting_type === '世界觀') {
+        storySettings.worldview = row.setting_data;
+      } else if (row.setting_type === '大綱') {
+        storySettings.outline = row.setting_data;
+      }
+    });
+
     // 獲取上一章節資訊
     const previousChapterResult = await query(`
       SELECT chapter_number, title, full_text, summary
@@ -197,40 +239,16 @@ export async function POST(
     const chapterNumber = await generateChapterNumber(storyId);
 
     // 生成提示詞（不帶入讀者選擇）
-    const prompt = generateChapterPrompt(storyTitle, previousChapter, chapterNumber);
+    const prompt = generateChapterPrompt(storyTitle, previousChapter, chapterNumber, storySettings);
 
-    // 暫時使用模擬數據，跳過 OpenAI API 呼叫
-    console.log('🤖 使用模擬數據（跳過 OpenAI API）...');
-    const chapterData = {
-      title: `第${chapterNumber}章：故事發展`,
-      content: `故事繼續發展，主角面臨新的挑戰和機遇，在${storyTitle}的世界中展開新的冒險。情節自然推進，為讀者帶來更多驚喜和期待。
-
-隨著情節的推進，角色們的關係也發生了微妙的變化。新的盟友出現，舊的敵人可能轉變，而主角必須在這些複雜的關係中做出明智的選擇。
-
-環境的變化也為故事增添了新的色彩。從${previousChapter?.title || '故事開始'}到現在，世界變得更加豐富多彩，充滿了無限的可能性。
-
-讀者們，你們的選擇正在塑造這個故事！接下來會發生什麼，完全取決於你們的決定。`,
-      summary: `故事進入新的發展階段。主角面臨新挑戰，關係發生變化，世界變得更加豐富。`,
-      voting_options: [
-        {
-          id: "A",
-          content: "勇敢面對新的挑戰",
-          description: "主角選擇正面迎擊困難，展現勇氣和決心"
-        },
-        {
-          id: "B", 
-          content: "尋求盟友的幫助",
-          description: "主角決定尋找可靠的夥伴，共同面對困境"
-        },
-        {
-          id: "C",
-          content: "暫時撤退重新規劃",
-          description: "主角選擇戰略性撤退，重新評估情況"
-        }
-      ]
-    };
-
-    console.log('✅ 模擬數據生成成功');
+    // 呼叫 OpenAI API 生成真實章節內容
+    console.log('🤖 呼叫 OpenAI API 生成章節內容...');
+    const aiResponse = await callOpenAI(prompt);
+    console.log('📝 AI 回應:', aiResponse);
+    
+    // 解析 AI 回應
+    const chapterData = parseAIResponse(aiResponse);
+    console.log('✅ AI 章節內容解析成功');
 
     // 儲存章節到資料庫
     const newChapterId = await saveChapterToDatabase(storyId, chapterData, chapterNumber);

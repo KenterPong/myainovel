@@ -233,14 +233,8 @@ export function useHomeData() {
     fetchChapters();
   }, []);
 
-  // 定期刷新資料（每30秒）
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchChapters(filteredStoryId || undefined);
-    }, 30000); // 30秒
-
-    return () => clearInterval(interval);
-  }, [filteredStoryId]);
+  // 移除自動更新功能，避免妨礙使用者閱讀和投票
+  // 使用者可以手動刷新或透過投票觸發更新
 
 
   return {
