@@ -49,28 +49,47 @@ export function ChapterVotingSection({
 
   // 處理投票提交
   const handleVote = async (optionId: string) => {
-    if (isSubmitting || !isVotingActive) return;
+    console.log('🎯 開始投票處理:', { optionId, isSubmitting, isVotingActive, localVotingStatus });
+    
+    if (isSubmitting || !isVotingActive || localVotingStatus !== '投票中') {
+      console.log('❌ 投票被阻止:', { isSubmitting, isVotingActive, localVotingStatus });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
-      const result = await submitVote(optionId);
-      setSelectedOption(optionId);
-      onVoteSuccess?.();
+      setSelectedOption(optionId); // 立即設置選中狀態，防止重複點擊
       
-      // 根據投票結果更新狀態
-      if (result?.data?.thresholdReached) {
+      console.log('📤 提交投票到 API:', optionId);
+      const result = await submitVote(optionId);
+      console.log('📥 投票 API 回應:', result);
+      
+      // 先更新投票狀態，避免重複處理
+      if (result && 'data' in result && result.data?.thresholdReached) {
         // 如果達到門檻，狀態變為投票截止
+        console.log('✅ 投票達到門檻，設置為投票截止');
         setLocalVotingStatus('投票截止');
         onVotingStatusChange?.('投票截止');
-        // 觸發新章節生成通知
-        onNewChapterGenerated?.();
       } else {
         // 否則變為已投票
+        console.log('✅ 投票成功，設置為已投票');
         setLocalVotingStatus('已投票');
         onVotingStatusChange?.('已投票');
       }
+      
+      // 最後才觸發成功回調
+      onVoteSuccess?.();
+      
+      // 如果達到門檻，觸發新章節生成通知
+      if (result && 'data' in result && result.data?.thresholdReached) {
+        console.log('🚀 觸發新章節生成');
+        onNewChapterGenerated?.();
+      }
     } catch (error) {
-      console.error('投票失敗:', error);
+      console.error('❌ 投票失敗:', error);
+      
+      // 重置選中狀態
+      setSelectedOption(null);
       
       // 處理投票已結束的情況
       if (error instanceof Error && error.message.includes('投票已結束')) {
@@ -96,9 +115,9 @@ export function ChapterVotingSection({
   // 載入狀態 - 顯示投票選項但禁用互動
   if (loading && !voteStats) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-gray-50 rounded-lg p-4">
         <div className="text-sm text-gray-600 mb-4">
-          載入中... - 選擇故事發展方向
+          載入中...
         </div>
         <div className="space-y-3">
           {votingOptions.map((option) => (
@@ -129,8 +148,8 @@ export function ChapterVotingSection({
     return (
       <div className="bg-gray-50 rounded-lg p-4">
         <div className="text-sm text-gray-600 mb-4">
-          {localVotingStatus === '投票截止' ? '已根據投票結果生成下一章' : 
-           localVotingStatus === '已投票' ? `您已投票 (選擇了選項 ${voteStats?.userChoice})` : '投票時間已截止'}
+          {localVotingStatus === '投票截止' ? '投票已結束，正在生成下一章' : 
+           localVotingStatus === '已投票' ? '您已投票' : '投票已結束'}
         </div>
         <div className="space-y-3">
           {votingOptions.map((option) => {
@@ -203,7 +222,7 @@ export function ChapterVotingSection({
   return (
     <div className="bg-gray-50 rounded-lg p-4">
       <div className="text-sm text-gray-600 mb-4">
-        投票中 ({totalVotes}票) - 選擇故事發展方向
+        投票中 ({totalVotes}票)
       </div>
 
       {/* 投票選項 */}
@@ -225,7 +244,15 @@ export function ChapterVotingSection({
                   }
                   ${isSubmitting || voteStats?.userVoted || !voteStats?.isVotingActive ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
-                onClick={() => !isSubmitting && voteStats?.isVotingActive && !voteStats?.userVoted && handleVote(option.id)}
+                onClick={() => {
+                  if (!isSubmitting && 
+                      voteStats?.isVotingActive && 
+                      !voteStats?.userVoted && 
+                      localVotingStatus === '投票中' && 
+                      !selectedOption) {
+                    handleVote(option.id);
+                  }
+                }}
               >
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">

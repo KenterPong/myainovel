@@ -66,6 +66,7 @@ export function useChapterVoting({ storyId, chapterId, enabled = true }: UseChap
     if (!storyId || !chapterId || !optionId) return;
 
     try {
+      console.log('🔄 useChapterVoting: 開始提交投票', { storyId, chapterId, optionId });
       setLoading(true);
       setError(null);
 
@@ -74,6 +75,7 @@ export function useChapterVoting({ storyId, chapterId, enabled = true }: UseChap
         voterSession: getSessionId()
       };
 
+      console.log('📤 useChapterVoting: 發送投票請求', voteData);
       const response = await fetch(`/api/stories/${storyId}/chapters/${chapterId}/vote`, {
         method: 'POST',
         headers: {
@@ -101,12 +103,14 @@ export function useChapterVoting({ storyId, chapterId, enabled = true }: UseChap
       }
 
       const data: ChapterVoteResponse = await response.json();
+      console.log('📥 useChapterVoting: 收到投票回應', data);
 
       if (!data.success) {
         throw new Error(data.message || '投票失敗');
       }
 
       // 更新本地狀態
+      console.log('🔄 useChapterVoting: 更新本地狀態', data.data);
       setVoteStats(prev => prev ? {
         ...prev,
         voteCounts: data.data.voteCounts,
@@ -119,6 +123,7 @@ export function useChapterVoting({ storyId, chapterId, enabled = true }: UseChap
         isVotingActive: !data.data.thresholdReached // 如果達到門檻則停止投票
       } : null);
 
+      console.log('✅ useChapterVoting: 投票處理完成');
       return data;
     } catch (error) {
       console.error('投票失敗:', error);

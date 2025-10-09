@@ -44,7 +44,7 @@ export default function Home() {
   // 處理投票成功
   const handleVoteSuccess = () => {
     // 可以添加投票成功後的處理邏輯
-    console.log('投票成功！')
+    console.log('🎉 首頁收到投票成功回調')
   }
 
   // 處理新章節生成

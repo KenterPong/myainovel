@@ -314,22 +314,19 @@ export async function POST(
     }
 
     // 使用事務處理投票
+    console.log('🔄 開始投票事務處理:', { chapterId, storyId, voterIP, voterSession, optionId });
     await transaction(async (client) => {
       // 記錄投票
-      await client.query(`
+      console.log('📝 插入投票記錄');
+      const voteResult = await client.query(`
         INSERT INTO chapter_votes (vote_id, chapter_id, story_id, voter_ip, voter_session, option_id, voted_at)
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        RETURNING vote_id
       `, [randomUUID(), chapterId, storyId, voterIP, voterSession, optionId]);
+      console.log('✅ 投票記錄插入完成:', voteResult.rows[0].vote_id);
 
-      // 更新投票統計
-      await client.query(`
-        INSERT INTO chapter_vote_totals (chapter_id, story_id, option_id, vote_count, last_updated)
-        VALUES ($1, $2, $3, 1, NOW())
-        ON CONFLICT (chapter_id, option_id)
-        DO UPDATE SET 
-          vote_count = chapter_vote_totals.vote_count + 1,
-          last_updated = NOW()
-      `, [chapterId, storyId, optionId]);
+      // 投票統計由資料庫觸發器自動更新，不需要手動更新
+      console.log('📊 投票統計將由資料庫觸發器自動更新');
 
       // 計算冷卻結束時間
       const cooldownUntil = new Date();
@@ -346,10 +343,13 @@ export async function POST(
     });
 
     // 檢查是否達到門檻
+    console.log('🔍 檢查投票門檻');
     const voteStats = await checkVotingThreshold(chapterId);
+    console.log('📊 投票統計結果:', voteStats);
     
     if (voteStats.thresholdReached) {
       // 更新章節狀態為投票截止
+      console.log('🚫 投票已達門檻，更新狀態為投票截止');
       await updateChapterVotingStatus(chapterId, '投票截止');
       
       // 觸發 AI 生成新章節
