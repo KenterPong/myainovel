@@ -60,6 +60,9 @@
 - ✅ 移除會員依賴功能（通知系統）
 - ✅ 圖示設計統一化（首頁🏠、起源✨、暫存🔖、免責聲明⚖️、語系選單🌐）
 - ✅ 響應式導航體驗優化
+- ✅ 語系選單支援 6 種語言（繁體中文、簡體中文、English、日本語、한국어、泰文）
+- ✅ 免責聲明頁面獨立建立
+- ✅ 高亮狀態和互動效果優化
 
 ## 📦 使用方式
 
@@ -235,7 +238,9 @@ myainovel/
 │   │   ├── origin/
 │   │   │   ├── layout.tsx
 │   │   │   └── page.tsx
-│   │   ├── settings/           # 設定頁面（包含免責聲明）
+│   │   ├── settings/           # 設定頁面
+│   │   │   └── page.tsx
+│   │   ├── disclaimer/         # 免責聲明頁面
 │   │   │   └── page.tsx
 │   │   ├── collection/         # 收藏頁面（暫存功能）
 │   │   │   └── page.tsx
@@ -264,7 +269,7 @@ myainovel/
 │   │   ├── ChapterNavigation.tsx     # 章節導航組件
 │   │   ├── ChapterListModal.tsx      # 章節列表彈窗組件
 │   │   ├── VoteOption.tsx      # 投票選項組件
-│   │   ├── LanguageSelector.tsx     # 語系選單組件（手機版彈窗）
+│   │   ├── LanguageSelector.tsx     # 語系選單組件（手機版彈窗 + 電腦版下拉）
 │   │   ├── LoadingState.tsx    # 載入狀態組件
 │   │   ├── ErrorState.tsx      # 錯誤狀態組件
 │   │   └── EmptyState.tsx      # 空資料狀態組件

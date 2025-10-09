@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
+import LanguageSelector from './LanguageSelector'
 
 export default function Sidebar() {
   const [selectedLanguage, setSelectedLanguage] = useState('繁體中文')
@@ -50,14 +51,6 @@ export default function Sidebar() {
     },
   ]
 
-  const languages = [
-    { code: 'zh-TW', name: '繁體中文' },
-    { code: 'zh-CN', name: '簡體中文' },
-    { code: 'en', name: 'English' },
-    { code: 'ja', name: '日本語' },
-    { code: 'ko', name: '한국어' },
-    { code: 'th', name: '泰文' }
-  ]
 
   return (
     <div className="w-full bg-gray-100 border-r border-gray-200 h-screen flex flex-col sticky top-0">
@@ -99,19 +92,7 @@ export default function Sidebar() {
 
       {/* 語言選擇 */}
       <div className="p-3 lg:p-4 border-t border-gray-200">
-        <div className="relative">
-          <select
-            value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value)}
-            className="w-full px-2 lg:px-3 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          >
-            {languages.map((lang) => (
-              <option key={lang.code} value={lang.name}>
-                {lang.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LanguageSelector isMobile={false} />
       </div>
 
       {/* 廣告區域 */}
