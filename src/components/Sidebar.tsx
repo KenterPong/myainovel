@@ -21,14 +21,13 @@ export default function Sidebar() {
       name: '起源', 
       href: '/origin', 
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="m9 12 2 2 4-4"/>
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
       )
     },
     { 
-      name: '收藏', 
+      name: '暫存', 
       href: '/collection', 
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -38,34 +37,27 @@ export default function Sidebar() {
       )
     },
     { 
-      name: '通知', 
-      href: '/notifications', 
+      name: '免責聲明', 
+      href: '/disclaimer', 
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-        </svg>
-      )
-    },
-    { 
-      name: '設定', 
-      href: '/settings', 
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+          <line x1="9" y1="9" x2="9.01" y2="9"/>
+          <line x1="15" y1="9" x2="15.01" y2="9"/>
         </svg>
       )
     },
   ]
 
-  const settingsSubItems = [
-    { name: 'AI免責聲明', href: '/settings#disclaimer', icon: '⚖️' },
-    { name: '檢舉內容', href: '/settings#report', icon: '🚨' },
-    { name: '幫助中心', href: '/settings#help', icon: '❓' },
+  const languages = [
+    { code: 'zh-TW', name: '繁體中文' },
+    { code: 'zh-CN', name: '簡體中文' },
+    { code: 'en', name: 'English' },
+    { code: 'ja', name: '日本語' },
+    { code: 'ko', name: '한국어' },
+    { code: 'th', name: '泰文' }
   ]
-
-  const languages = ['繁體中文', 'English', '日本語', '한국어']
 
   return (
     <div className="w-full bg-gray-100 border-r border-gray-200 h-screen flex flex-col sticky top-0">
@@ -86,7 +78,6 @@ export default function Sidebar() {
         <ul className="space-y-1 lg:space-y-2">
           {navigationItems.map((item) => {
             const isActive = pathname === item.href
-            const isSettings = item.name === '設定'
             return (
               <li key={item.name}>
                 <Link
@@ -100,22 +91,6 @@ export default function Sidebar() {
                   <span className="text-gray-700">{item.icon}</span>
                   <span className="truncate">{item.name}</span>
                 </Link>
-                {/* 設定子選單 */}
-                {isSettings && (
-                  <ul className="ml-4 mt-1 space-y-1">
-                    {settingsSubItems.map((subItem) => (
-                      <li key={subItem.name}>
-                        <Link
-                          href={subItem.href}
-                          className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors text-xs lg:text-sm text-gray-600 hover:bg-gray-50"
-                        >
-                          <span className="text-sm">{subItem.icon}</span>
-                          <span className="truncate">{subItem.name}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </li>
             )
           })}
@@ -131,8 +106,8 @@ export default function Sidebar() {
             className="w-full px-2 lg:px-3 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           >
             {languages.map((lang) => (
-              <option key={lang} value={lang}>
-                {lang}
+              <option key={lang.code} value={lang.name}>
+                {lang.name}
               </option>
             ))}
           </select>

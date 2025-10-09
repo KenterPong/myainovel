@@ -2,11 +2,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useHomeData } from '@/lib/hooks/useHomeData'
-import NotificationPopup from './NotificationPopup'
+import { useState } from 'react'
 
 export default function BottomNav() {
   const pathname = usePathname()
   const { currentChapterId, clearCurrentChapter, filterByStory, filteredStoryId } = useHomeData()
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false)
 
   // 處理首頁按鈕點擊
   const handleHomeClick = (e: React.MouseEvent) => {
@@ -18,6 +19,21 @@ export default function BottomNav() {
     // 直接導航到首頁，強制重新載入
     window.location.href = '/'
   }
+
+  // 處理語系選單切換
+  const handleLanguageMenuToggle = () => {
+    setIsLanguageMenuOpen(!isLanguageMenuOpen)
+  }
+
+  // 支援的語言列表
+  const languages = [
+    { code: 'zh-TW', name: '繁體中文', flag: '🇹🇼' },
+    { code: 'zh-CN', name: '簡體中文', flag: '🇨🇳' },
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'ja', name: '日本語', flag: '🇯🇵' },
+    { code: 'ko', name: '한국어', flag: '🇰🇷' },
+    { code: 'th', name: '泰文', flag: '🇹🇭' }
+  ]
 
   const navigationItems = [
     { 
@@ -34,14 +50,13 @@ export default function BottomNav() {
       name: '起源', 
       href: '/origin', 
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="m9 12 2 2 4-4"/>
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
       )
     },
     { 
-      name: '收藏', 
+      name: '暫存', 
       href: '/collection', 
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,24 +66,28 @@ export default function BottomNav() {
       )
     },
     { 
-      name: '通知', 
-      href: '/notifications', 
+      name: '免責聲明', 
+      href: '/disclaimer', 
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+          <line x1="9" y1="9" x2="9.01" y2="9"/>
+          <line x1="15" y1="9" x2="15.01" y2="9"/>
         </svg>
       )
     },
     { 
-      name: '設定', 
+      name: '語系選單', 
       href: null, 
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M2 12h20"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
         </svg>
       ),
+      onClick: handleLanguageMenuToggle,
       isPopup: true
     }
   ]
@@ -84,7 +103,18 @@ export default function BottomNav() {
           if (item.isPopup) {
             return (
               <div key={item.name} className="flex items-center justify-center p-2 rounded transition-colors">
-                <NotificationPopup />
+                <button
+                  onClick={item.onClick}
+                  className={`flex items-center justify-center p-2 rounded-lg transition-colors ${
+                    isLanguageMenuOpen
+                      ? 'text-primary-700 bg-primary-100 font-medium'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className={`${isLanguageMenuOpen ? 'text-primary-700' : 'text-gray-500'}`}>
+                    {item.icon}
+                  </div>
+                </button>
               </div>
             )
           }
@@ -107,6 +137,41 @@ export default function BottomNav() {
           )
         })}
       </div>
+      
+      {/* 語系選單彈窗 */}
+      {isLanguageMenuOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setIsLanguageMenuOpen(false)}>
+          <div className="fixed bottom-20 left-4 right-4 bg-white rounded-lg shadow-lg p-4 z-50" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">選擇語言</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {languages.map((language) => (
+                <button
+                  key={language.code}
+                  onClick={() => {
+                    console.log('選擇語言:', language.name)
+                    setIsLanguageMenuOpen(false)
+                    // 這裡可以添加語言切換邏輯
+                  }}
+                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                >
+                  <span className="text-2xl">{language.flag}</span>
+                  <span className="text-sm font-medium text-gray-700">{language.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setIsLanguageMenuOpen(false)}
+                className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
