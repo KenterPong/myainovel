@@ -19,7 +19,7 @@
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #B39DD;
+  --ring: #B39DDB;
   --radius: 0.5rem;
 }
 
@@ -39,7 +39,7 @@
     --destructive-foreground: #ffffff;
     --border: #1e293b;
     --input: #1e293b;
-    --ring: #B39DD;
+    --ring: #B39DDB;
   }
 }
 

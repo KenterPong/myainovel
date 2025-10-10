@@ -280,15 +280,7 @@ export async function POST(
       
       if (illustrationResult.success) {
         console.log('✅ 章節插圖生成成功:', illustrationResult.illustrationUrl);
-        
-        // 暫時停用分享圖片生成
-        // TODO: 後續需要時再啟用
-        // try {
-        //   await illustrationService.generateShareImages(storyId, newChapterId);
-        //   console.log('✅ 分享圖片生成完成');
-        // } catch (shareImageError) {
-        //   console.error('⚠️ 分享圖片生成失敗:', shareImageError);
-        // }
+        console.log('✅ 分享圖片生成已整合到插圖生成流程中');
       } else {
         console.log('⚠️ 章節插圖生成失敗:', illustrationResult.error);
       }

@@ -27,14 +27,18 @@ export default function ChapterIllustration({
   // 如果沒有插圖 URL，顯示預設插圖
   if (!illustrationUrl || imageError) {
     return (
-      <div className={`relative w-full h-64 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg overflow-hidden ${className}`}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-6xl mb-2">🎨</div>
-            <p className="text-gray-600 text-sm">插圖生成中...</p>
-            {illustrationStyle && (
-              <p className="text-gray-500 text-xs mt-1">風格: {illustrationStyle}</p>
-            )}
+      <div className={`relative w-full ${className}`}>
+        <div className="relative w-full rounded-lg overflow-hidden shadow-lg">
+          <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] md:aspect-[3/2] lg:aspect-[4/3] bg-gradient-to-br from-purple-100 to-pink-100">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-2">🎨</div>
+                <p className="text-gray-600 text-sm">插圖生成中...</p>
+                {illustrationStyle && (
+                  <p className="text-gray-500 text-xs mt-1">風格: {illustrationStyle}</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -43,29 +47,32 @@ export default function ChapterIllustration({
 
   return (
     <div className={`relative w-full ${className}`}>
-      <div className="relative w-full h-64 rounded-lg overflow-hidden shadow-lg">
-        <Image
-          src={illustrationUrl}
-          alt={chapterTitle ? `${chapterTitle} 插圖` : '章節插圖'}
-          fill
-          className={`object-cover transition-opacity duration-300 ${
-            imageLoading ? 'opacity-0' : 'opacity-100'
-          }`}
-          onLoad={() => setImageLoading(false)}
-          onError={() => setImageError(true)}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          priority={false}
-        />
-        
-        {/* 載入狀態 */}
-        {imageLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
-              <p className="text-gray-600 text-sm">載入插圖中...</p>
+      <div className="relative w-full rounded-lg overflow-hidden shadow-lg">
+        {/* 使用 aspect-ratio 來保持圖片比例，避免裁切 */}
+        <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] md:aspect-[3/2] lg:aspect-[4/3]">
+          <Image
+            src={illustrationUrl}
+            alt={chapterTitle ? `${chapterTitle} 插圖` : '章節插圖'}
+            fill
+            className={`object-contain transition-opacity duration-300 ${
+              imageLoading ? 'opacity-0' : 'opacity-100'
+            }`}
+            onLoad={() => setImageLoading(false)}
+            onError={() => setImageError(true)}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={false}
+          />
+          
+          {/* 載入狀態 */}
+          {imageLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                <p className="text-gray-600 text-sm">載入插圖中...</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* 插圖資訊 */}

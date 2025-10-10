@@ -13,7 +13,7 @@ const nextConfig = {
   
   // 實驗性功能
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true, // 暫時停用，可能導致 MIME 類型問題
   },
   
   

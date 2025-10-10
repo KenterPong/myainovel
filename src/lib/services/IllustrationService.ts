@@ -101,27 +101,31 @@ export class IllustrationService {
     try {
       console.log(`開始生成章節 ${request.chapterId} 的插圖...`);
 
-      // 1. 獲取或建立故事風格設定
+      // 1. 獲取章節編號
+      const chapterNumber = await this.getChapterNumber(request.chapterId);
+      console.log(`章節編號: ${chapterNumber}`);
+
+      // 2. 獲取或建立故事風格設定
       const illustrationStyle = await this.getOrCreateIllustrationStyle(request.storyId, request.storyGenre);
       
-      // 2. 生成插圖提示詞
+      // 3. 生成插圖提示詞
       const illustrationPrompt = this.generateIllustrationPrompt(
         request.chapterTitle,
         request.chapterContent,
         illustrationStyle
       );
 
-      // 3. 呼叫 OpenAI DALL-E 3 API
+      // 4. 呼叫 OpenAI DALL-E 3 API
       const dalleResponse = await this.callDalleApi(illustrationPrompt);
 
-      // 4. 下載並處理圖片
+      // 5. 下載並處理圖片
       const processedImagePath = await this.downloadAndProcessImage(
         dalleResponse.data[0].url,
         request.storyId,
-        request.chapterId
+        chapterNumber
       );
 
-      // 5. 更新資料庫
+      // 6. 更新資料庫
       await this.updateChapterIllustration(
         request.chapterId,
         processedImagePath,
@@ -129,8 +133,16 @@ export class IllustrationService {
         illustrationStyle.style_name
       );
 
+      // 7. 生成分享圖片
+      try {
+        await this.generateShareImages(request.storyId, chapterNumber);
+        console.log('✅ 分享圖片生成完成');
+      } catch (shareImageError) {
+        console.error('⚠️ 分享圖片生成失敗:', shareImageError);
+      }
+
       const processingTime = Date.now() - startTime;
-      console.log(`章節 ${request.chapterId} 插圖生成完成，耗時: ${processingTime}ms`);
+      console.log(`章節 ${request.chapterId} (${chapterNumber}) 插圖生成完成，耗時: ${processingTime}ms`);
 
       return {
         success: true,
@@ -147,6 +159,27 @@ export class IllustrationService {
         success: false,
         error: error instanceof Error ? error.message : '未知錯誤'
       };
+    }
+  }
+
+  /**
+   * 獲取章節編號
+   */
+  private async getChapterNumber(chapterId: number): Promise<string> {
+    try {
+      const result = await query(
+        'SELECT chapter_number FROM chapters WHERE chapter_id = $1',
+        [chapterId]
+      );
+      
+      if (result.rows.length === 0) {
+        throw new Error(`章節 ${chapterId} 不存在`);
+      }
+      
+      return result.rows[0].chapter_number;
+    } catch (error) {
+      console.error('獲取章節編號失敗:', error);
+      throw new Error(`獲取章節編號失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
     }
   }
 
@@ -254,7 +287,7 @@ export class IllustrationService {
   private async downloadAndProcessImage(
     imageUrl: string,
     storyId: string,
-    chapterId: number
+    chapterNumber: string
   ): Promise<string> {
     try {
       // 下載原始圖片
@@ -274,12 +307,12 @@ export class IllustrationService {
         .webp({ quality: this.imageQualityValue })
         .toBuffer();
 
-      // 儲存處理後的圖片
-      const fileName = `${chapterId}.webp`;
+      // 儲存處理後的圖片（使用章節編號作為檔名）
+      const fileName = `${chapterNumber}.webp`;
       const filePath = path.join(storyDir, fileName);
       await fs.writeFile(filePath, processedBuffer);
 
-      console.log(`章節 ${chapterId} 插圖已儲存: ${fileName}`);
+      console.log(`章節 ${chapterNumber} 插圖已儲存: ${fileName}`);
 
       // 返回相對路徑
       return `/images/stories/${storyId}/${fileName}`;
@@ -295,29 +328,32 @@ export class IllustrationService {
    */
   async generateShareImages(
     storyId: string,
-    chapterId: number
+    chapterNumber: string
   ): Promise<void> {
     try {
       // 讀取已生成的插圖
-      const originalImagePath = path.join(this.storagePath, storyId, `${chapterId}.webp`);
+      const originalImagePath = path.join(this.storagePath, storyId, `${chapterNumber}.webp`);
       
       // 檢查原始插圖是否存在
       try {
         await fs.access(originalImagePath);
       } catch (error) {
-        console.log(`章節 ${chapterId} 的原始插圖不存在，跳過分享圖片生成`);
+        console.log(`章節 ${chapterNumber} 的原始插圖不存在，跳過分享圖片生成`);
         return;
       }
 
       const originalBuffer = await fs.readFile(originalImagePath);
-      const shareDir = path.join(this.storagePath, storyId);
+      
+      // 建立分享圖片目錄
+      const shareDir = path.join(this.storagePath, storyId, 'shares');
+      await fs.mkdir(shareDir, { recursive: true });
       
       // 各平台分享圖片尺寸設定
       const shareSizes = {
-        x: { width: 1200, height: 630 }, // X (Twitter) Card 尺寸
-        fb: { width: 1200, height: 630 }, // Facebook Open Graph 尺寸
+        x: { width: 1200, height: 675 }, // X (Twitter) Card 尺寸
+        facebook: { width: 1200, height: 630 }, // Facebook Open Graph 尺寸
         line: { width: 800, height: 600 }, // Line 分享尺寸
-        threads: { width: 1200, height: 630 }, // Threads 分享尺寸
+        threads: { width: 1080, height: 1080 }, // Threads 分享尺寸
       };
 
       // 檢查是否啟用多尺寸生成
@@ -330,7 +366,7 @@ export class IllustrationService {
       const imageQuality = parseInt(process.env.SOCIAL_IMAGE_QUALITY || '85');
       const imageFormat = process.env.SOCIAL_IMAGE_FORMAT || 'webp';
 
-      console.log(`開始為章節 ${chapterId} 生成分享圖片...`);
+      console.log(`開始為章節 ${chapterNumber} 生成分享圖片...`);
 
       for (const [platform, size] of Object.entries(shareSizes)) {
         try {
@@ -342,7 +378,8 @@ export class IllustrationService {
             .webp({ quality: imageQuality })
             .toBuffer();
 
-          const fileName = `${chapterId}_${platform}.${imageFormat}`;
+          // 按照 README.md 的檔案命名規範
+          const fileName = `${chapterNumber}_${platform}.${imageFormat}`;
           const filePath = path.join(shareDir, fileName);
           await fs.writeFile(filePath, processedBuffer);
 
@@ -352,7 +389,7 @@ export class IllustrationService {
         }
       }
 
-      console.log(`章節 ${chapterId} 的分享圖片生成完成`);
+      console.log(`章節 ${chapterNumber} 的分享圖片生成完成`);
     } catch (error) {
       console.error('生成分享圖片失敗:', error);
     }

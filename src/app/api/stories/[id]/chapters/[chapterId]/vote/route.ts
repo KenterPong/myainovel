@@ -120,32 +120,9 @@ async function checkCooldown(chapterId: string, voterIP: string, voterSession: s
   cooldownUntil?: string;
 }> {
   try {
-    // 先檢查章節的冷卻時間
-    const chapterResult = await query(`
-      SELECT cooldown_until
-      FROM chapters 
-      WHERE chapter_id = $1
-    `, [chapterId]);
-    
-    if (chapterResult.rows.length === 0) {
-      return { canVote: true };
-    }
-    
-    const chapter = chapterResult.rows[0];
     const now = new Date();
     
-    // 如果有冷卻時間記錄，檢查是否已過期
-    if (chapter.cooldown_until) {
-      const cooldownUntil = new Date(chapter.cooldown_until);
-      if (now < cooldownUntil) {
-        return { 
-          canVote: false, 
-          cooldownUntil: cooldownUntil.toISOString() 
-        };
-      }
-    }
-    
-    // 檢查用戶是否已投票
+    // 檢查用戶是否已投票（基於 chapter_votes 表的 voted_at 欄位計算冷卻時間）
     const voteResult = await query(`
       SELECT voted_at
       FROM chapter_votes 
@@ -176,15 +153,14 @@ async function checkCooldown(chapterId: string, voterIP: string, voterSession: s
 }
 
 // 更新章節投票狀態
-async function updateChapterVotingStatus(chapterId: string, status: '投票中' | '已投票' | '投票截止', userChoice?: string, cooldownUntil?: string): Promise<void> {
+async function updateChapterVotingStatus(chapterId: string, status: '投票中' | '已投票' | '投票截止', userChoice?: string): Promise<void> {
   try {
     await query(`
       UPDATE chapters 
       SET voting_status = $2, 
-          user_choice = $3,
-          cooldown_until = $4
+          user_choice = $3
       WHERE chapter_id = $1
-    `, [chapterId, status, userChoice, cooldownUntil]);
+    `, [chapterId, status, userChoice]);
   } catch (error) {
     console.error('更新章節投票狀態錯誤:', error);
     throw error;
@@ -221,7 +197,7 @@ export async function GET(
 
     // 獲取章節資訊
     const chapterResult = await query(`
-      SELECT chapter_id, voting_status, user_choice, cooldown_until, voting_deadline
+      SELECT chapter_id, voting_status, user_choice, voting_deadline
       FROM chapters 
       WHERE chapter_id = $1 AND story_id = $2
     `, [chapterId, storyId]);
@@ -270,7 +246,7 @@ export async function GET(
         chapterId: parseInt(chapterId),
         votingStatus: chapter.voting_status,
         votingDeadline: chapter.voting_deadline,
-        cooldownUntil: chapter.cooldown_until,
+        cooldownUntil: cooldownCheck.cooldownUntil,
         voteCounts: voteStats.voteCounts,
         totalVotes: voteStats.totalVotes,
         userVoted,
@@ -384,18 +360,13 @@ export async function POST(
       // 投票統計由資料庫觸發器自動更新，不需要手動更新
       console.log('📊 投票統計將由資料庫觸發器自動更新');
 
-      // 計算冷卻結束時間
-      const cooldownUntil = new Date();
-      cooldownUntil.setHours(cooldownUntil.getHours() + CHAPTER_VOTING_COOLDOWN_HOURS);
-
       // 更新章節狀態為已投票
       await client.query(`
         UPDATE chapters 
         SET voting_status = '已投票',
-            user_choice = $2,
-            cooldown_until = $3
+            user_choice = $2
         WHERE chapter_id = $1
-      `, [chapterId, optionId, cooldownUntil.toISOString()]);
+      `, [chapterId, optionId]);
     });
 
     // 檢查是否達到門檻

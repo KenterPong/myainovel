@@ -2,6 +2,68 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, transaction } from '@/lib/db';
 import { randomUUID } from 'crypto';
 
+// 根據故事類型獲取插圖風格設定
+function getIllustrationStyleByGenre(genre: string) {
+  const genreStyleMapping = {
+    '科幻': {
+      story_genre: '科幻',
+      style_name: '賽博龐克插畫風',
+      style_prompt: 'Cyberpunk illustration style, neon colors, dark atmosphere, futuristic cityscape, detailed character design, high contrast lighting, digital art aesthetic',
+      color_palette: ['#00FFFF', '#FF00FF', '#FFFF00', '#000000'],
+      art_style: 'Digital illustration with clean lines and vibrant neon colors',
+      mood: 'Dark, mysterious, high-tech',
+      character_style: 'Anime-inspired character design with cyberpunk elements'
+    },
+    '奇幻': {
+      story_genre: '奇幻',
+      style_name: '魔幻插畫風',
+      style_prompt: 'Fantasy illustration style, magical atmosphere, epic fantasy setting, detailed character design, mystical lighting, digital art aesthetic',
+      color_palette: ['#FFD700', '#8A2BE2', '#32CD32'],
+      art_style: 'Rich colors, magical elements, mystical atmosphere',
+      mood: 'Epic, magical, mysterious',
+      character_style: 'Fantasy character design with magical elements'
+    },
+    '都市': {
+      story_genre: '都市',
+      style_name: '現代插畫風',
+      style_prompt: 'Modern illustration style, clean lines, urban life, realistic atmosphere, detailed character design, contemporary lighting, digital art aesthetic',
+      color_palette: ['#4682B4', '#FFA500', '#F5F5DC'],
+      art_style: 'Clean lines, urban life, realistic feel',
+      mood: 'Modern, urban, contemporary',
+      character_style: 'Modern character design with urban elements'
+    },
+    '懸疑': {
+      story_genre: '懸疑',
+      style_name: '暗黑插畫風',
+      style_prompt: 'Dark illustration style, mysterious atmosphere, suspenseful setting, detailed character design, dramatic lighting, digital art aesthetic',
+      color_palette: ['#696969', '#8B0000', '#006400'],
+      art_style: 'Dark atmosphere, mysterious, tense',
+      mood: 'Dark, mysterious, suspenseful',
+      character_style: 'Dramatic character design with dark elements'
+    },
+    '愛情': {
+      story_genre: '愛情',
+      style_name: '浪漫插畫風',
+      style_prompt: 'Romantic illustration style, soft colors, warm atmosphere, emotional setting, detailed character design, gentle lighting, digital art aesthetic',
+      color_palette: ['#FFB6C1', '#DDA0DD', '#FFE4B5'],
+      art_style: 'Soft colors, warm atmosphere, emotional',
+      mood: 'Romantic, warm, emotional',
+      character_style: 'Romantic character design with soft elements'
+    },
+    '冒險': {
+      story_genre: '冒險',
+      style_name: '動感插畫風',
+      style_prompt: 'Dynamic illustration style, energetic atmosphere, adventurous setting, detailed character design, vibrant lighting, digital art aesthetic',
+      color_palette: ['#FF8C00', '#1E90FF', '#DC143C'],
+      art_style: 'Dynamic composition, energetic, exciting',
+      mood: 'Energetic, exciting, adventurous',
+      character_style: 'Dynamic character design with adventurous elements'
+    }
+  };
+
+  return genreStyleMapping[genre as keyof typeof genreStyleMapping] || genreStyleMapping['都市'];
+}
+
 // OpenAI API 設定
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
@@ -181,6 +243,10 @@ async function saveStoryToDatabase(storyData: any, genre: string, background: st
           overall_arc: storyData.outline,
           current_status: "故事設定完成，準備開始撰寫第一章"
         }
+      },
+      {
+        type: '插圖風格',
+        data: getIllustrationStyleByGenre(genre)
       }
     ];
 
