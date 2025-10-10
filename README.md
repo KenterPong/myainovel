@@ -406,23 +406,48 @@ myainovel/
 
 ### OpenAI 故事生成架構
 
-本專案整合 **OpenAI GPT-4o-mini** 模型，實現完整的 AI 故事生成系統。透過結構化的提示詞工程和 JSON 格式輸出，確保生成的故事具有完整的故事架構和連貫性。
+本專案整合 **OpenAI GPT-4o-mini** 模型，實現完整的 AI 故事生成系統。採用**英文先行**的多語系優化策略，透過結構化的提示詞工程和 JSON 格式輸出，確保生成的故事具有完整的故事架構和連貫性。
+
+#### 多語系優化策略
+
+##### 核心策略：英文為橋樑，分表儲存語系
+- **英文先行生成**：使用英文名稱生成故事內容，確保 AI 識別穩定性
+- **分表儲存策略**：各語系內容分別儲存在獨立資料表中，提升查詢效能
+- **多語系名稱對應**：預先鎖定各語系角色名稱，避免翻譯時的不一致性
+- **簡單字串替換**：翻譯時只需替換預設的英文名稱，確保所有語系版本完全一致
+- **動態表名查詢**：根據使用者選擇的語系動態查詢對應的語系表
+
+##### 角色名稱管理
+```json
+{
+  "name": {
+    "primary": "Kiyoshi Soragumo",     // 英文為主導名（AI 生成用）
+    "zh_tw": "叢雲清",                 // 繁體中文
+    "zh_cn": "丛云清",                 // 簡體中文
+    "ja": "叢雲 清（むらくも きよし）", // 日文
+    "ko": "구름청",                    // 韓文
+    "th": "คิโยชิ โซรากูโมะ",          // 泰文
+    "en": "Kiyoshi Soragumo"          // 英文（與 primary 相同）
+  }
+}
+```
 
 #### AI 故事生成流程
 
-##### 1. 故事主題與背景設定生成
+##### 1. 故事主題與背景設定生成（英文先行）
 - **模型**：GPT-4o-mini
 - **溫度設定**：0.8（平衡創意與一致性）
+- **語言**：英文（確保 AI 識別穩定性）
 - **輸入**：使用者提供的原始提示詞
-- **輸出**：結構化的故事設定 JSON
+- **輸出**：結構化的英文故事設定 JSON
 
-##### 2. 故事生成結構
-AI 會根據以下 6 個核心要素生成完整的故事設定：
+##### 2. 故事生成結構（英文版本）
+AI 會根據以下 6 個核心要素生成完整的英文故事設定：
 
-1. **故事標題** - 吸引人的故事名稱
-2. **故事類型與背景世界觀** - 明確的類型定位和世界觀設定
+1. **故事標題** - 吸引人的英文故事名稱
+2. **故事類型與背景世界觀** - 明確的英文類型定位和世界觀設定
 3. **主要角色設定** - 至少 2-3 個主要角色，包含：
-   - 角色名稱
+   - 英文角色名稱（如：Kiyoshi Soragumo）
    - 年齡
    - 角色定位
    - 性格特點
@@ -431,34 +456,67 @@ AI 會根據以下 6 個核心要素生成完整的故事設定：
 5. **故事背景環境描述** - 詳細的世界觀環境設定
 6. **故事發展大綱** - 包含開頭、發展、高潮、結局的完整架構
 
-##### 3. JSON 輸出格式
+##### 3. JSON 輸出格式（英文版本）
 ```json
 {
-    "title": "故事標題",
-    "genre": "故事類型",
-    "worldview": "背景世界觀描述",
+    "title": "Story Title in English",
+    "genre": "Story Genre in English",
+    "worldview": "Worldview Description in English",
     "characters": [
         {
-            "name": "角色名稱",
-            "age": "年齡",
-            "role": "角色定位",
-            "personality": "性格特點",
-            "background": "背景故事"
+            "name": {
+                "primary": "Kiyoshi Soragumo",
+                "zh_tw": "叢雲清",
+                "ja": "叢雲 清（むらくも きよし）",
+                "ko": "구름청",
+                "th": "คิโยชิ โซรากูโมะ"
+            },
+            "age": "Age",
+            "role": "Character Role in English",
+            "personality": "Personality Traits in English",
+            "background": "Background Story in English"
         }
     ],
-    "conflict": "核心衝突描述",
-    "theme": "故事主題",
-    "setting": "故事背景環境",
+    "conflict": "Core Conflict Description in English",
+    "theme": "Story Theme in English",
+    "setting": "Story Setting Environment in English",
     "outline": {
-        "beginning": "開頭設定",
-        "development": "發展過程",
-        "climax": "高潮情節",
-        "ending": "結局安排"
+        "beginning": "Beginning Setup in English",
+        "development": "Development Process in English",
+        "climax": "Climax Events in English",
+        "ending": "Ending Arrangement in English"
     }
 }
 ```
 
-##### 4. 錯誤處理與資料清理
+##### 4. 多語系翻譯流程（分表儲存策略）
+
+###### 4.1 資料庫設計優勢
+- **效能優化**：查詢時只需載入目標語系資料，避免載入其他語系的長文本
+- **欄位設計清晰**：每個表都只有單一語系的長文本，邏輯清晰
+- **易於維護**：如果某一語系翻譯出現問題，可單獨修復而不影響其他語系
+- **擴展性好**：未來如果某個語系需要特殊欄位（如日文的 furigana），可直接在該語系表上新增
+
+###### 4.2 實作流程
+- **英文原文儲存**：將 AI 生成的英文原文儲存到 `chapters` 表
+- **分表翻譯**：根據預設的名稱對應表翻譯成各語系版本，分別儲存到對應語系表
+- **名稱替換**：使用簡單字串替換確保角色名稱一致性
+- **動態查詢**：根據使用者選擇的語系動態查詢對應的語系表
+- **品質控制**：英文原文穩定，翻譯品質更高
+
+###### 4.3 查詢範例
+```sql
+-- 讀取第 5 章的英文內容
+SELECT title, full_text FROM chapters WHERE chapter_id = 5;
+
+-- 讀取第 5 章的日文內容
+SELECT title, full_text FROM chapters_ja WHERE chapter_id = 5;
+
+-- 讀取第 5 章的韓文內容
+SELECT title, full_text FROM chapters_ko WHERE chapter_id = 5;
+```
+
+##### 5. 錯誤處理與資料清理
 - **JSON 解析錯誤處理**：自動清理 AI 回應中的非 JSON 內容
 - **格式驗證**：確保生成的 JSON 格式正確且完整
 - **除錯模式**：當 JSON 解析失敗時，顯示原始回應供除錯
@@ -508,16 +566,30 @@ AI 生成的 JSON 結構會自動對應到以下資料庫欄位：
    }
    ```
 
-##### 5. 系統提示詞設計
+##### 6. 系統提示詞設計（英文版本）
 ```
-你是一位專業的小說作家和故事策劃師，擅長創作完整的故事架構。請確保回傳的JSON格式正確且完整。
+You are a professional novelist and story planner, skilled in creating complete story structures. Please ensure the returned JSON format is correct and complete.
+
+【CORE CHARACTER LIST (MUST use these exact names, never change or confuse):】
+- Kiyoshi Soragumo (Protagonist/Calm/Male)
+- Arashi Soragumo (Supporting/Impulsive/Female)
+
+【Story Guidelines:】
+- Use ONLY the names listed above
+- Maintain consistent personality traits
+- Keep character relationships intact
+- Follow the established world-building rules
+- Write in English for maximum AI stability
+- Ensure character names are used consistently throughout the story
+- Avoid using generic terms like "protagonist" or "main character"
 ```
 
-##### 6. 視覺化展示
+##### 7. 視覺化展示
 - 使用 Tailwind CSS 建立美觀的響應式介面
 - 分區塊展示故事的各個要素
-- 支援中文顯示和 UTF-8 編碼
+- 支援多語系顯示和 UTF-8 編碼
 - 提供關閉視窗功能
+- 英文原文與翻譯版本並行顯示
 
 #### AI 章節插圖生成系統
 
@@ -690,19 +762,21 @@ Fantasy illustration style, magical atmosphere, epic fantasy setting, detailed c
 | `completion_date` | `TIMESTAMP WITH TIME ZONE` | 完結日 | |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | 記錄創建時間 | |
 
-##### 2. `chapters` (章節表)
-記錄 AI 生成的每一個章節，確保劇情連貫性的核心資料表。
+##### 2. `chapters` (章節主表 - 英文/核心數據)
+儲存英文原文內容，作為翻譯基準和 AI 生成的主要語系。
+記錄 AI 生成的每一個章節的核心資訊，確保劇情連貫性的主資料表。採用分表儲存語系策略。
 
 | 欄位名稱 | 資料類型 | 說明 | 備註 |
 |---------|---------|------|------|
-| `chapter_id` | `SERIAL` | **主鍵**：每個章節的唯一 ID | |
+| `chapter_id` | `SERIAL` | **主鍵**：每個章節的唯一 ID | 所有語系表的外鍵 |
 | `story_id` | `UUID` | **外鍵**：指向所屬的故事 | 確保章節歸屬 |
 | `chapter_number` | `VARCHAR(3)` | **章節編碼**：3碼數字編碼 | 001, 002, 003... |
-| `title` | `VARCHAR(255)` | 章節標題 | |
-| `full_text` | `TEXT` | AI 生成的**完整**章節內容 | 供讀者閱讀 |
-| `summary` | `TEXT` | **前情提要**：供 AI 撰寫下一章時使用的簡短摘要 | 關鍵欄位！ |
-| `tags` | `JSONB` | **自動生成標籤**：AI 根據章節內容生成的搜尋標籤 | 例：["魔法學院", "校園生活", "考試挑戰"] |
-| `voting_options` | `JSONB` | **投票選項**：AI 生成的四個選項供讀者投票 | 包含選項內容和票數 |
+| `title` | `VARCHAR(255)` | 章節標題（英文）| 供英文讀者閱讀 |
+| `summary` | `TEXT` | 章節摘要（英文） | 供英文 AI 提示詞使用 |
+| `full_text` | `TEXT` | 章節內容（英文） | 供英文讀者閱讀 |
+| `has_translation` | `BOOLEAN` | 是否已生成其他語系翻譯 | 方便後端檢查 |
+| `tags` | `JSONB` | **自動生成標籤**：AI 根據章節內容生成的搜尋標籤 | ，依各語系各自翻譯標籤文字，例：{["Magic Academy"]} |
+| `voting_options` | `JSONB` | **投票選項**：AI 生成的四個選項供讀者投票 ，依各語系各自翻譯投票文字 |
 | `voting_deadline` | `TIMESTAMP WITH TIME ZONE` | **投票截止時間** | 自動設定倒數時間 |
 | `voting_status` | `VARCHAR(20)` | **投票狀態** | '投票中', '已截止' |
 | `user_choice` | `VARCHAR(255)` | 該章節是根據哪個**讀者票選選項**生成的 | 例：'選項 B: 前往地下城'（僅在投票狀態為'已截止'時記錄） |
@@ -712,6 +786,61 @@ Fantasy illustration style, magical atmosphere, epic fantasy setting, detailed c
 | `illustration_style` | `VARCHAR(100)` | **插圖風格** | 繼承自故事類型的固定風格 |
 | `illustration_generated_at` | `TIMESTAMP WITH TIME ZONE` | **插圖生成時間** | 記錄插圖生成完成時間 |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | 記錄生成時間 | |
+
+##### 2.1 `chapters_zh_tw` (繁體中文章節表)
+儲存繁體中文翻譯內容。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `chapter_id` | `INTEGER` | **主鍵/外鍵**：與主表 `chapter_id` 保持一致 | 關聯的關鍵 |
+| `title` | `VARCHAR(255)` | 章節標題（繁體中文） | 從英文翻譯而來 |
+| `summary` | `TEXT` | 章節摘要（繁體中文） | 從英文翻譯而來 |
+| `full_text` | `TEXT` | 章節內容（繁體中文原文） | 從英文翻譯而來 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | 翻譯生成時間 | |
+
+##### 2.2 `chapters_zh_cn` (簡體中文章節表)
+儲存簡體中文翻譯內容。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `chapter_id` | `INTEGER` | **主鍵/外鍵**：與主表 `chapter_id` 保持一致 | 關聯的關鍵 |
+| `title` | `VARCHAR(255)` | 章節標題（簡體中文） | 從英文翻譯而來 |
+| `summary` | `TEXT` | 章節摘要（簡體中文） | 從英文翻譯而來 |
+| `full_text` | `TEXT` | 章節內容（簡體中文） | 從英文翻譯而來 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | 翻譯生成時間 | |
+
+##### 2.3 `chapters_ja` (日文章節表)
+儲存日文翻譯內容。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `chapter_id` | `INTEGER` | **主鍵/外鍵**：與主表 `chapter_id` 保持一致 | 關聯的關鍵 |
+| `title` | `VARCHAR(255)` | 章節標題（日文） | 從英文翻譯而來 |
+| `summary` | `TEXT` | 章節摘要（日文） | 從英文翻譯而來 |
+| `full_text` | `TEXT` | 章節內容（日文） | 從英文翻譯而來 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | 翻譯生成時間 | |
+
+##### 2.4 `chapters_ko` (韓文章節表)
+儲存韓文翻譯內容。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `chapter_id` | `INTEGER` | **主鍵/外鍵**：與主表 `chapter_id` 保持一致 | 關聯的關鍵 |
+| `title` | `VARCHAR(255)` | 章節標題（韓文） | 從英文翻譯而來 |
+| `summary` | `TEXT` | 章節摘要（韓文） | 從英文翻譯而來 |
+| `full_text` | `TEXT` | 章節內容（韓文） | 從英文翻譯而來 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | 翻譯生成時間 | |
+
+##### 2.5 `chapters_th` (泰文章節表)
+儲存泰文翻譯內容。
+
+| 欄位名稱 | 資料類型 | 說明 | 備註 |
+|---------|---------|------|------|
+| `chapter_id` | `INTEGER` | **主鍵/外鍵**：與主表 `chapter_id` 保持一致 | 關聯的關鍵 |
+| `title` | `VARCHAR(255)` | 章節標題（泰文） | 從英文翻譯而來 |
+| `summary` | `TEXT` | 章節摘要（泰文） | 從英文翻譯而來 |
+| `full_text` | `TEXT` | 章節內容（泰文） | 從英文翻譯而來 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | 翻譯生成時間 | |
 
 ##### 3. `story_settings` (故事設定檔表)
 儲存「故事聖經」- 角色與世界觀設定，是故事生成的核心檔案。
@@ -803,13 +932,19 @@ Fantasy illustration style, magical atmosphere, epic fantasy setting, detailed c
 #### 資料表關聯設計
 
 ```
-stories (1) ←→ (N) chapters
+stories (1) ←→ (N) chapters (主表)
     ↓
     (1) ←→ (N) story_settings
     ↓
     (1) ←→ (N) origin_votes
     ↓
     (1) ←→ (N) origin_vote_totals
+
+chapters (1) ←→ (1) chapters_zh_tw
+chapters (1) ←→ (1) chapters_zh_cn
+chapters (1) ←→ (1) chapters_ja
+chapters (1) ←→ (1) chapters_ko
+chapters (1) ←→ (1) chapters_th
 
 chapters (1) ←→ (N) chapter_votes
     ↓
@@ -824,6 +959,11 @@ chapters (1) ←→ (N) chapter_votes
 - **`story_settings.story_id`** → `stories.story_id` (外鍵)
 - **`origin_votes.story_id`** → `stories.story_id` (外鍵)
 - **`origin_vote_totals.story_id`** → `stories.story_id` (外鍵)
+- **`chapters_zh_tw.chapter_id`** → `chapters.chapter_id` (外鍵)
+- **`chapters_zh_cn.chapter_id`** → `chapters.chapter_id` (外鍵)
+- **`chapters_ja.chapter_id`** → `chapters.chapter_id` (外鍵)
+- **`chapters_ko.chapter_id`** → `chapters.chapter_id` (外鍵)
+- **`chapters_th.chapter_id`** → `chapters.chapter_id` (外鍵)
 - **`chapter_votes.chapter_id`** → `chapters.chapter_id` (外鍵)
 - **`chapter_votes.story_id`** → `stories.story_id` (外鍵)
 - **`chapter_vote_totals.chapter_id`** → `chapters.chapter_id` (外鍵)
@@ -836,26 +976,34 @@ chapters (1) ←→ (N) chapter_votes
 ##### A. 角色設定 (`setting_type` = '角色')
 ```json
 {
-  "name": "叢雲清",
-  "archetype": "主角",
-  "appearance": "銀色短髮，右眼角有微小疤痕。",
-  "personality": "冷靜、聰明、內斂，優先考慮邏輯而非情感。",
-  "motto": "「行動勝於空談。」",
-  "goal": "尋找失蹤的家族遺物。",
-  "status": "健康，擁有基礎駭客能力。"
+  "name": {
+    "primary": "Kiyoshi Soragumo",
+    "zh_tw": "叢雲清",
+    "zh_cn": "丛云清",
+    "ja": "叢雲 清（むらくも きよし）",
+    "ko": "구름청",
+    "th": "คิโยชิ โซรากูโมะ",
+    "en": "Kiyoshi Soragumo"
+  },
+  "archetype": "Protagonist",
+  "appearance": "Silver short hair with a small scar near the right eye.",
+  "personality": "Calm, intelligent, introverted, prioritizing logic over emotion.",
+  "motto": "Actions speak louder than words.",
+  "goal": "Search for the missing family heirloom.",
+  "status": "Healthy, possesses basic hacking abilities."
 }
 ```
 
 ##### B. 世界觀設定 (`setting_type` = '世界觀')
 ```json
 {
-  "era": "近未來 (2077 年)",
-  "location": "新東京，一座賽博龐克城市。",
-  "technology_level": "高度發達，但貧富差距懸殊，企業控制一切。",
-  "magic_rules": "無魔法，僅有先進的生物義肢和 AI 網路。",
+  "era": "Near Future (2077)",
+  "location": "Neo Tokyo, a cyberpunk city.",
+  "technology_level": "Highly advanced, but with extreme wealth disparity, corporations control everything.",
+  "magic_rules": "No magic, only advanced bioprosthetics and AI networks.",
   "key_factions": [
-    {"name": "宙斯企業", "role": "主要反派"},
-    {"name": "黑市網絡", "role": "情報中介"}
+    {"name": "Zeus Corporation", "role": "Main Antagonist"},
+    {"name": "Black Market Network", "role": "Information Broker"}
   ]
 }
 ```
@@ -866,22 +1014,22 @@ chapters (1) ←→ (N) chapter_votes
   "chapter_summaries": [
     {
       "chapter_number": "001",
-      "title": "覺醒",
-      "summary": "叢雲清在廢棄實驗室中醒來，發現自己擁有特殊能力...",
-      "key_events": ["能力覺醒", "遇到神秘組織", "發現身世線索"],
-      "character_development": "主角從迷茫到堅定，開始接受自己的使命"
+      "title": "Awakening",
+      "summary": "Kiyoshi Soragumo wakes up in an abandoned laboratory, discovering he has special abilities...",
+      "key_events": ["Power Awakening", "Encounter with Mysterious Organization", "Discovery of Lineage Clues"],
+      "character_development": "Kiyoshi transitions from confusion to determination, beginning to accept his mission"
     }
   ],
-  "overall_arc": "主角的成長歷程，從普通人到拯救世界的英雄",
-  "current_status": "章節001完成，準備進入章節002"
+  "overall_arc": "Kiyoshi's growth journey from ordinary person to world-saving hero",
+  "current_status": "Chapter 001 completed, ready to enter Chapter 002"
 }
 ```
 
 ##### D. 插圖風格設定 (`setting_type` = '插圖風格')
 ```json
 {
-  "story_genre": "科幻",
-  "style_name": "賽博龐克插畫風",
+  "story_genre": "Science Fiction",
+  "style_name": "Cyberpunk Illustration Style",
   "style_prompt": "Cyberpunk illustration style, neon colors, dark atmosphere, futuristic cityscape, detailed character design, high contrast lighting, digital art aesthetic",
   "color_palette": ["#00FFFF", "#FF00FF", "#FFFF00", "#000000"],
   "art_style": "Digital illustration with clean lines and vibrant neon colors",
