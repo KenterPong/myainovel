@@ -4,18 +4,42 @@ import { randomUUID } from 'crypto';
 
 // 獲取客戶端 IP 地址
 function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
+  // 嘗試多種方式獲取真實客戶端IP
+  const forwardedFor = request.headers.get('x-forwarded-for');
   const realIP = request.headers.get('x-real-ip');
+  const cfConnectingIP = request.headers.get('cf-connecting-ip'); // Cloudflare
+  const xClientIP = request.headers.get('x-client-ip');
+  const xForwarded = request.headers.get('x-forwarded');
+  const xClusterClientIP = request.headers.get('x-cluster-client-ip');
   
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
+  // 解析IPv6格式的IP (::ffff:192.168.8.154 -> 192.168.8.154)
+  let clientIP = '127.0.0.1';
+  
+  // 按優先級檢查各種IP頭部
+  const ipSources = [
+    { value: cfConnectingIP, name: 'cf-connecting-ip' },
+    { value: xClientIP, name: 'x-client-ip' },
+    { value: realIP, name: 'x-real-ip' },
+    { value: xForwarded, name: 'x-forwarded' },
+    { value: xClusterClientIP, name: 'x-cluster-client-ip' },
+    { value: forwardedFor, name: 'x-forwarded-for' }
+  ];
+  
+  for (const source of ipSources) {
+    if (source.value) {
+      const firstIP = source.value.split(',')[0].trim();
+      // 處理IPv6映射的IPv4地址
+      if (firstIP.startsWith('::ffff:')) {
+        clientIP = firstIP.substring(7); // 移除 ::ffff: 前綴
+      } else {
+        clientIP = firstIP;
+      }
+      console.log(`章節投票使用 ${source.name} 獲取IP: ${clientIP}`);
+      break;
+    }
   }
   
-  if (realIP) {
-    return realIP;
-  }
-  
-  return '127.0.0.1'; // 預設值
+  return clientIP;
 }
 
 // 獲取環境變數設定
@@ -177,6 +201,22 @@ export async function GET(
     const voterIP = getClientIP(request);
     const voterSession = request.headers.get('x-session-id') || 'anonymous';
 
+    // 添加詳細的IP檢測日誌
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const realIP = request.headers.get('x-real-ip');
+    const userAgent = request.headers.get('user-agent');
+    
+    console.log('--- 章節投票GET API請求日誌 ---');
+    console.log('請求URL:', request.url);
+    console.log('章節ID:', chapterId);
+    console.log('X-Forwarded-For:', forwardedFor);
+    console.log('X-Real-IP:', realIP);
+    console.log('User-Agent:', userAgent);
+    console.log('解析前的IP:', forwardedFor || realIP || '127.0.0.1');
+    console.log('最終判斷的客戶端IP:', voterIP);
+    console.log('所有請求頭:', Object.fromEntries(request.headers.entries()));
+    console.log('-----------------------------');
+
     console.log('GET vote stats:', { storyId, chapterId, voterIP, voterSession });
 
     // 獲取章節資訊
@@ -262,6 +302,22 @@ export async function POST(
     const voterSession = request.headers.get('x-session-id') || 'anonymous';
     const body = await request.json();
     const { optionId } = body;
+
+    // 添加詳細的IP檢測日誌
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const realIP = request.headers.get('x-real-ip');
+    const userAgent = request.headers.get('user-agent');
+    
+    console.log('--- 章節投票POST API請求日誌 ---');
+    console.log('請求URL:', request.url);
+    console.log('章節ID:', chapterId);
+    console.log('X-Forwarded-For:', forwardedFor);
+    console.log('X-Real-IP:', realIP);
+    console.log('User-Agent:', userAgent);
+    console.log('解析前的IP:', forwardedFor || realIP || '127.0.0.1');
+    console.log('最終判斷的客戶端IP:', voterIP);
+    console.log('所有請求頭:', Object.fromEntries(request.headers.entries()));
+    console.log('-----------------------------');
 
     // 驗證投票選項
     if (!optionId || !['A', 'B', 'C'].includes(optionId)) {

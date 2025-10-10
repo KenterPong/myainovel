@@ -244,12 +244,13 @@ export function ChapterVotingSection({
                   }
                   ${isSubmitting || voteStats?.userVoted || !voteStats?.isVotingActive ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation(); // 阻止事件冒泡，避免觸發文章收合
                   if (!isSubmitting && 
                       voteStats?.isVotingActive && 
                       !voteStats?.userVoted && 
-                      localVotingStatus === '投票中' && 
-                      !selectedOption) {
+                      localVotingStatus === '投票中') {
                     handleVote(option.id);
                   }
                 }}

@@ -343,6 +343,66 @@ ALTER TABLE chapter_vote_totals
 ADD CONSTRAINT chk_chapter_vote_totals_vote_count 
 CHECK (vote_count >= 0);
 
+-- 10. 建立章節滿意度投票相關資料表
+
+-- 10.1 建立 chapter_satisfaction_votes 表（章節滿意度投票記錄表）
+CREATE TABLE IF NOT EXISTS chapter_satisfaction_votes (
+    vote_id SERIAL PRIMARY KEY,
+    chapter_id INTEGER NOT NULL,
+    vote_type SMALLINT NOT NULL, -- 1=like, 2=star, 3=fire, 4=heart
+    ip_address INET NOT NULL,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- 外鍵約束
+    CONSTRAINT fk_chapter_satisfaction_votes_chapter_id 
+        FOREIGN KEY (chapter_id) 
+        REFERENCES chapters(chapter_id) 
+        ON DELETE CASCADE,
+    
+    -- 唯一約束：同一 IP 只能對同一章節投票一次
+    CONSTRAINT uk_chapter_satisfaction_votes_ip_chapter 
+        UNIQUE (ip_address, chapter_id)
+);
+
+-- 10.2 建立 chapter_shares 表（章節社群分享記錄表）
+CREATE TABLE IF NOT EXISTS chapter_shares (
+    share_id SERIAL PRIMARY KEY,
+    chapter_id INTEGER NOT NULL,
+    platform VARCHAR(20) NOT NULL, -- 'twitter', 'facebook', 'line'
+    ip_address INET NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- 外鍵約束
+    CONSTRAINT fk_chapter_shares_chapter_id 
+        FOREIGN KEY (chapter_id) 
+        REFERENCES chapters(chapter_id) 
+        ON DELETE CASCADE
+);
+
+-- 10.3 建立索引以提升查詢效能
+-- chapter_satisfaction_votes 表索引
+CREATE INDEX IF NOT EXISTS idx_chapter_satisfaction_votes_chapter_id ON chapter_satisfaction_votes(chapter_id);
+CREATE INDEX IF NOT EXISTS idx_chapter_satisfaction_votes_vote_type ON chapter_satisfaction_votes(vote_type);
+CREATE INDEX IF NOT EXISTS idx_chapter_satisfaction_votes_ip_address ON chapter_satisfaction_votes(ip_address);
+CREATE INDEX IF NOT EXISTS idx_chapter_satisfaction_votes_created_at ON chapter_satisfaction_votes(created_at);
+
+-- chapter_shares 表索引
+CREATE INDEX IF NOT EXISTS idx_chapter_shares_chapter_id ON chapter_shares(chapter_id);
+CREATE INDEX IF NOT EXISTS idx_chapter_shares_platform ON chapter_shares(platform);
+CREATE INDEX IF NOT EXISTS idx_chapter_shares_ip_address ON chapter_shares(ip_address);
+CREATE INDEX IF NOT EXISTS idx_chapter_shares_created_at ON chapter_shares(created_at);
+
+-- 10.4 建立檢查約束
+-- 確保投票類型是有效值
+ALTER TABLE chapter_satisfaction_votes 
+ADD CONSTRAINT chk_chapter_satisfaction_votes_vote_type 
+CHECK (vote_type IN (1, 2, 3, 4));
+
+-- 確保分享平台是有效值
+ALTER TABLE chapter_shares 
+ADD CONSTRAINT chk_chapter_shares_platform 
+CHECK (platform IN ('twitter', 'facebook', 'line'));
 
 -- 11. 插入範例資料（可選）
 -- 建立一個範例故事
@@ -390,8 +450,9 @@ ON CONFLICT (story_id, setting_type) DO NOTHING;
 DO $$
 BEGIN
     RAISE NOTICE '✅ 資料庫初始化完成！';
-    RAISE NOTICE '📊 已建立資料表：stories, chapters, story_settings, origin_votes, origin_vote_totals, chapter_votes, chapter_vote_totals';
+    RAISE NOTICE '📊 已建立資料表：stories, chapters, story_settings, origin_votes, origin_vote_totals, chapter_votes, chapter_vote_totals, chapter_satisfaction_votes, chapter_shares';
     RAISE NOTICE '🔗 已建立外鍵關聯和索引';
     RAISE NOTICE '⚡ 已建立觸發器和約束條件';
     RAISE NOTICE '📝 已插入範例資料';
+    RAISE NOTICE '🎯 階段2：滿意度投票與社群分享系統資料表已建立';
 END $$;

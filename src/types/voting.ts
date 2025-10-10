@@ -85,3 +85,77 @@ export interface OriginVoteResponse {
   data: OriginVoteStats;
   message: string;
 }
+
+// 滿意度投票類型枚舉
+export enum SatisfactionVoteType {
+  LIKE = 1,    // 👍 喜歡
+  STAR = 2,    // ⭐ 精彩
+  FIRE = 3,    // 🔥 超讚
+  HEART = 4    // 💖 感動
+}
+
+// 滿意度投票統計介面
+export interface SatisfactionVoteStats {
+  chapterId: number;
+  voteCounts: {
+    [SatisfactionVoteType.LIKE]: number;
+    [SatisfactionVoteType.STAR]: number;
+    [SatisfactionVoteType.FIRE]: number;
+    [SatisfactionVoteType.HEART]: number;
+  };
+  totalVotes: number;
+  userVoted: boolean;
+  userVoteType?: SatisfactionVoteType;
+}
+
+// 滿意度投票請求介面
+export interface SatisfactionVoteRequest {
+  voteType: SatisfactionVoteType;
+}
+
+// 滿意度投票回應介面
+export interface SatisfactionVoteResponse {
+  success: boolean;
+  data: SatisfactionVoteStats;
+  message: string;
+}
+
+// 社群分享平台枚舉
+export enum SharePlatform {
+  TWITTER = 'twitter',
+  FACEBOOK = 'facebook',
+  LINE = 'line',
+  THREADS = 'threads'
+}
+
+// 社群分享統計介面
+export interface ShareStats {
+  chapterId: number;
+  shareCounts: {
+    [SharePlatform.TWITTER]: number;
+    [SharePlatform.FACEBOOK]: number;
+    [SharePlatform.LINE]: number;
+    [SharePlatform.THREADS]: number;
+  };
+  totalShares: number;
+}
+
+// 社群分享請求介面
+export interface ShareRequest {
+  platform: SharePlatform;
+}
+
+// 社群分享回應介面
+export interface ShareResponse {
+  success: boolean;
+  data: ShareStats;
+  message: string;
+}
+
+// 分享文案生成介面
+export interface ShareContent {
+  text: string;
+  hashtags: string[];
+  url: string;
+  imageUrl?: string;
+}

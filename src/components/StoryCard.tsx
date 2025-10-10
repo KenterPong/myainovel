@@ -8,6 +8,15 @@ import { ChapterNavigation } from './ChapterNavigation';
 import { ChapterListModal } from './ChapterListModal';
 import ChapterIllustration from './ChapterIllustration';
 import { getOriginTags } from '@/lib/utils/originTags';
+import { 
+  SatisfactionVoteType, 
+  SatisfactionVoteStats, 
+  SatisfactionVoteRequest,
+  SharePlatform,
+  ShareStats,
+  ShareRequest
+} from '@/types/voting';
+import { FaXTwitter, FaFacebookF, FaLine, FaThreads } from 'react-icons/fa6';
 
 interface ChapterCardProps {
   chapter: any; // 章節資料
@@ -35,12 +44,23 @@ export function StoryCard({
   filteredTag
 }: ChapterCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // 調試日誌：追蹤 isExpanded 狀態變化
+  useEffect(() => {
+    console.log(`StoryCard 章節 ${chapter.chapter_number} - isExpanded 變更為: ${isExpanded}`);
+  }, [isExpanded, chapter.chapter_number]);
   const [localVotingStatus, setLocalVotingStatus] = useState(chapter.voting_status);
   const [navigationInfo, setNavigationInfo] = useState<any>(null);
   const [navigationLoading, setNavigationLoading] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
   const [storyChapters, setStoryChapters] = useState<any[]>([]);
   const [chaptersLoading, setChaptersLoading] = useState(false);
+  
+  // 階段2功能狀態
+  const [satisfactionStats, setSatisfactionStats] = useState<SatisfactionVoteStats | null>(null);
+  const [shareStats, setShareStats] = useState<ShareStats | null>(null);
+  const [satisfactionLoading, setSatisfactionLoading] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
 
   // 同步本地投票狀態
   useEffect(() => {
@@ -70,6 +90,7 @@ export function StoryCard({
     };
 
     fetchNavigationInfo();
+    fetchSatisfactionStats();
   }, [chapter.story_id, chapter.chapter_number]);
 
   // 格式化投票選項
@@ -129,6 +150,153 @@ export function StoryCard({
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     e.stopPropagation();
+  };
+
+  // 階段2功能處理函數
+  // 獲取滿意度投票統計
+  const fetchSatisfactionStats = async () => {
+    try {
+      setSatisfactionLoading(true);
+      console.log('獲取滿意度統計:', { chapterId: chapter.chapter_id });
+      
+      const response = await fetch(
+        `/api/stories/${chapter.story_id}/chapters/${chapter.chapter_id}/satisfaction`
+      );
+      const data = await response.json();
+      
+      console.log('滿意度統計回應:', data);
+      
+      if (data.success) {
+        setSatisfactionStats(data.data);
+      } else {
+        console.error('獲取滿意度統計失敗:', data.message);
+      }
+    } catch (error) {
+      console.error('獲取滿意度投票統計失敗:', error);
+    } finally {
+      setSatisfactionLoading(false);
+    }
+  };
+
+  // 提交滿意度投票
+  const handleSatisfactionVote = async (voteType: SatisfactionVoteType) => {
+    // 防止重複點擊
+    if (satisfactionLoading || satisfactionStats?.userVoted) {
+      return;
+    }
+
+    try {
+      setSatisfactionLoading(true);
+      console.log('提交滿意度投票:', { voteType, chapterId: chapter.chapter_id });
+      
+      const response = await fetch(
+        `/api/stories/${chapter.story_id}/chapters/${chapter.chapter_id}/satisfaction`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ voteType } as SatisfactionVoteRequest),
+        }
+      );
+
+      const data = await response.json();
+      console.log('投票回應:', data);
+      
+      if (data.success) {
+        setSatisfactionStats(data.data);
+        // 投票成功後不要收合文章，保持展開狀態
+        // 不調用 setIsExpanded(false)
+      } else {
+        console.error('投票失敗:', data.message);
+      }
+    } catch (error) {
+      console.error('投票失敗:', error);
+    } finally {
+      setSatisfactionLoading(false);
+    }
+  };
+
+  // 獲取分享統計
+  const fetchShareStats = async () => {
+    try {
+      setShareLoading(true);
+      const response = await fetch(
+        `/api/stories/${chapter.story_id}/chapters/${chapter.chapter_id}/share`
+      );
+      const data = await response.json();
+      
+      if (data.success) {
+        setShareStats(data.data);
+      }
+    } catch (error) {
+      console.error('獲取分享統計失敗:', error);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  // 處理分享
+  const handleShare = async (platform: SharePlatform) => {
+    try {
+      setShareLoading(true);
+      
+      // 記錄分享到資料庫
+      const response = await fetch(
+        `/api/stories/${chapter.story_id}/chapters/${chapter.chapter_id}/share`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ platform } as ShareRequest),
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setShareStats(data.data);
+      }
+
+      // 生成分享內容並開啟分享視窗
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
+      const chapterUrl = `${baseUrl}/stories/${chapter.story_id}/chapters/${chapter.chapter_id}`;
+      
+      const shareContent = {
+        text: `📖 ${chapter.story_title} - ${chapter.title}\n\n${chapter.summary?.substring(0, 100)}...\n\n#AIStepMasterS1 #AI小說`,
+        url: chapterUrl
+      };
+
+      const shareUrl = getShareUrl(platform, shareContent);
+      if (shareUrl) {
+        window.open(shareUrl, '_blank', 'width=600,height=400');
+      }
+
+    } catch (error) {
+      console.error('分享失敗:', error);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  // 獲取各平台的分享URL
+  const getShareUrl = (platform: SharePlatform, content: any): string | null => {
+    const encodedText = encodeURIComponent(content.text);
+    const encodedUrl = encodeURIComponent(content.url);
+
+    switch (platform) {
+      case SharePlatform.TWITTER:
+        return `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+      case SharePlatform.FACEBOOK:
+        return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`;
+      case SharePlatform.LINE:
+        return `https://social-plugins.line.me/lineit/share?url=${encodedUrl}&text=${encodedText}`;
+      case SharePlatform.THREADS:
+        return `https://www.threads.net/intent/post?text=${encodedText}%20${encodedUrl}`;
+      default:
+        return null;
+    }
   };
 
   // 處理章節導航
@@ -299,8 +467,8 @@ export function StoryCard({
           
           {/* 章節標題和投票狀態 */}
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-medium text-gray-800 flex-1">
-              {chapter.title}
+            <h3 className="text-base font-bold text-gray-800 flex-1">
+              <span className="font-bold">{chapter.chapter_number}</span> <span className="font-bold">{chapter.title}</span>
             </h3>
             
             {/* 投票狀態 - 右邊 */}
@@ -314,6 +482,7 @@ export function StoryCard({
               {localVotingStatus}
             </span>
           </div>
+
 
           {/* 章節插圖 */}
           {chapter.illustration_url && (
@@ -360,6 +529,61 @@ export function StoryCard({
               </span>
             )}
             
+            {/* 滿意度投票區域 - 在展開的文章內容中，章節投票之前 */}
+            {isExpanded && (
+              <div className="mt-6 mb-4">
+                <div className="flex items-center justify-start px-2 py-2 bg-gray-50 rounded-lg">
+                  <div className="flex space-x-1">
+                    {Object.values(SatisfactionVoteType)
+                      .filter((v): v is SatisfactionVoteType => typeof v === 'number')
+                      .map((voteType) => {
+                      const isSelected = satisfactionStats?.userVoted && satisfactionStats?.userVoteType === voteType;
+                      const count = satisfactionStats?.voteCounts[voteType] || 0;
+                      const emoji = {
+                        [SatisfactionVoteType.LIKE]: '👍',
+                        [SatisfactionVoteType.STAR]: '⭐',
+                        [SatisfactionVoteType.FIRE]: '🔥',
+                        [SatisfactionVoteType.HEART]: '💖'
+                      }[voteType] || '❓';
+
+                      return (
+                        <button
+                          key={voteType}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation(); // 阻止事件冒泡，避免觸發文章收合
+                            if (!satisfactionStats) {
+                              fetchSatisfactionStats();
+                            }
+                            handleSatisfactionVote(voteType);
+                          }}
+                          disabled={satisfactionStats?.userVoted}
+                            className={`
+                              relative p-2 rounded-lg border-2 transition-all duration-200 text-lg
+                              ${isSelected 
+                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                : satisfactionStats?.userVoted
+                                  ? 'border-gray-300 bg-gray-100 text-gray-500'
+                                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              }
+                              ${satisfactionStats?.userVoted ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}
+                            `}
+                          title={satisfactionStats?.userVoted ? '已投票，無法再次投票' : '點擊投票'}
+                        >
+                          {emoji}
+                          {count > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-3 w-3 flex items-center justify-center">
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* 章節投票區域 - 只在展開時顯示 */}
             {isExpanded && hasVotingOptions && (
               <div className="mt-6">
@@ -374,6 +598,45 @@ export function StoryCard({
                 />
               </div>
             )}
+
+          </div>
+        </div>
+
+
+        {/* 社群分享區域 - 在章節導航上方 */}
+        <div className="flex items-center justify-end mb-3 px-2 sm:px-4 py-2 bg-gray-50 rounded-lg">
+          <div className="flex space-x-1">
+            {Object.values(SharePlatform).map((platform) => {
+              const count = shareStats?.shareCounts[platform] || 0;
+              const icon = { 
+                'twitter': <FaXTwitter className="text-black" />, 
+                'facebook': <FaFacebookF className="text-blue-600" />, 
+                'line': <FaLine className="text-green-500" />,
+                'threads': <FaThreads className="text-black" />
+              }[platform] || <FaXTwitter />;
+              const label = { 'twitter': 'X', 'facebook': 'Facebook', 'line': 'Line', 'threads': 'Threads' }[platform] || platform;
+
+              return (
+                <button
+                  key={platform}
+                  onClick={() => {
+                    if (!shareStats) {
+                      fetchShareStats();
+                    }
+                    handleShare(platform);
+                  }}
+                    className="relative p-2 rounded-lg border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 cursor-pointer text-lg"
+                  title={`分享到 ${label}`}
+                >
+                  {icon}
+                  {count > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full h-3 w-3 flex items-center justify-center">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 

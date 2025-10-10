@@ -279,12 +279,82 @@ export class IllustrationService {
       const filePath = path.join(storyDir, fileName);
       await fs.writeFile(filePath, processedBuffer);
 
+      console.log(`章節 ${chapterId} 插圖已儲存: ${fileName}`);
+
       // 返回相對路徑
       return `/images/stories/${storyId}/${fileName}`;
 
     } catch (error) {
       console.error('圖片處理失敗:', error);
       throw new Error(`圖片處理失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
+  }
+
+  /**
+   * 生成分享用多尺寸圖片（基於已生成的插圖）
+   */
+  async generateShareImages(
+    storyId: string,
+    chapterId: number
+  ): Promise<void> {
+    try {
+      // 讀取已生成的插圖
+      const originalImagePath = path.join(this.storagePath, storyId, `${chapterId}.webp`);
+      
+      // 檢查原始插圖是否存在
+      try {
+        await fs.access(originalImagePath);
+      } catch (error) {
+        console.log(`章節 ${chapterId} 的原始插圖不存在，跳過分享圖片生成`);
+        return;
+      }
+
+      const originalBuffer = await fs.readFile(originalImagePath);
+      const shareDir = path.join(this.storagePath, storyId);
+      
+      // 各平台分享圖片尺寸設定
+      const shareSizes = {
+        x: { width: 1200, height: 630 }, // X (Twitter) Card 尺寸
+        fb: { width: 1200, height: 630 }, // Facebook Open Graph 尺寸
+        line: { width: 800, height: 600 }, // Line 分享尺寸
+        threads: { width: 1200, height: 630 }, // Threads 分享尺寸
+      };
+
+      // 檢查是否啟用多尺寸生成
+      const generateSizes = process.env.SOCIAL_IMAGE_GENERATE_SIZES === 'true';
+      if (!generateSizes) {
+        console.log('分享圖片生成已禁用');
+        return;
+      }
+
+      const imageQuality = parseInt(process.env.SOCIAL_IMAGE_QUALITY || '85');
+      const imageFormat = process.env.SOCIAL_IMAGE_FORMAT || 'webp';
+
+      console.log(`開始為章節 ${chapterId} 生成分享圖片...`);
+
+      for (const [platform, size] of Object.entries(shareSizes)) {
+        try {
+          const processedBuffer = await sharp(originalBuffer)
+            .resize(size.width, size.height, {
+              fit: 'cover',
+              position: 'center'
+            })
+            .webp({ quality: imageQuality })
+            .toBuffer();
+
+          const fileName = `${chapterId}_${platform}.${imageFormat}`;
+          const filePath = path.join(shareDir, fileName);
+          await fs.writeFile(filePath, processedBuffer);
+
+          console.log(`已生成 ${platform} 分享圖片: ${fileName}`);
+        } catch (error) {
+          console.error(`生成 ${platform} 分享圖片失敗:`, error);
+        }
+      }
+
+      console.log(`章節 ${chapterId} 的分享圖片生成完成`);
+    } catch (error) {
+      console.error('生成分享圖片失敗:', error);
     }
   }
 

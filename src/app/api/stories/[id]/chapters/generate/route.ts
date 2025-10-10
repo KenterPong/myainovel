@@ -16,7 +16,7 @@ function generateChapterPrompt(storyTitle: string, previousChapter: any, chapter
   return `請根據以下資訊生成小說章節：
 
 故事標題：${storyTitle}
-章節編號：第 ${chapterNumber} 章
+章節編號：${chapterNumber}
 
 故事設定：
 - 角色設定：${JSON.stringify(characters, null, 2)}
@@ -27,7 +27,7 @@ function generateChapterPrompt(storyTitle: string, previousChapter: any, chapter
 上一章節摘要：${previousChapter?.summary || '故事開始'}
 
 請根據故事的自然發展邏輯生成一個完整的章節，包含：
-1. 章節標題
+1. 章節標題（不要包含「第x章：」前綴，只寫章節標題內容）
 2. 章節內容（至少 800 字，內容要豐富且具體，避免重複的模板文字）
 3. 章節摘要（100-150 字）
 4. 三個投票選項供讀者選擇下一章節的發展方向
@@ -280,6 +280,15 @@ export async function POST(
       
       if (illustrationResult.success) {
         console.log('✅ 章節插圖生成成功:', illustrationResult.illustrationUrl);
+        
+        // 暫時停用分享圖片生成
+        // TODO: 後續需要時再啟用
+        // try {
+        //   await illustrationService.generateShareImages(storyId, newChapterId);
+        //   console.log('✅ 分享圖片生成完成');
+        // } catch (shareImageError) {
+        //   console.error('⚠️ 分享圖片生成失敗:', shareImageError);
+        // }
       } else {
         console.log('⚠️ 章節插圖生成失敗:', illustrationResult.error);
       }
